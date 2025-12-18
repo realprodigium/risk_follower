@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
-from typing import Optional
 
 class RecordCreate(BaseModel):
     hardware: str
@@ -43,3 +42,12 @@ class User(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    username: str | None = None
+

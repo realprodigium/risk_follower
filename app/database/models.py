@@ -30,3 +30,6 @@ class Users(Base):
     password = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)) #utcnow deprecated
+
+
+
