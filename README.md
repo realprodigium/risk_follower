@@ -8,8 +8,8 @@ IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at 
 - **Predictions** XGBoost classifier
 - **API REST** Historical data queries
 - **WebSockets** Backend to Frontend
-- **Autenticación JWT** roles access control (LAN)
-- **Base de datos PostgreSQL** Main DB
+- **Auth JWT** roles access control (LAN)
+- **PostgreSQL DB** Main DB
 
 ## Stack
 
@@ -18,12 +18,15 @@ IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at 
 - SQLAlchemy + PostgreSQL (data layer)
 - aiomqtt client sub (hardware to backend)
 - XGBoost Library (ML)
-- python-jose (JWT auth)
-- 
+- fastapi.security (Auth|Tokenizer|Access)
+
+**Middleware: backend-hardware**
+- Broker: EMQX
 
 **Hardware:**
 - ESP32 Dev Kit wifi
-
+- Arduino IDE
+- mqtt library
 **Frontend:**
 soon
   
