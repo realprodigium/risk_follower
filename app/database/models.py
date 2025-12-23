@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, insert
 from datetime import datetime, timezone
 from ..db import Base, engine
+from app.services.auth_services import get_password_hash
 
 class Records(Base):
     __tablename__ = 'records'
@@ -31,5 +32,7 @@ class Users(Base):
     role = Column(String(20), nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)) #utcnow deprecated
 
-
-
+stmt = insert(Users).values(
+    username='administrador', 
+    password=get_password_hash('passwordadmin'), 
+    role='admin')

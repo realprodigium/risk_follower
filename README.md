@@ -27,8 +27,14 @@ IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at 
 - ESP32 Dev Kit wifi
 - Arduino IDE
 - mqtt library
+
+**Middleware: backend-frontend**
+
+- Websockets (starlette)
+
 **Frontend:**
 soon
   
 **University**: Universidad Cooperativa de Colombia
+
 **Year**: 2025-26
