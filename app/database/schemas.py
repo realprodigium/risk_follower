@@ -4,7 +4,7 @@ from datetime import datetime
 class RecordCreate(BaseModel):
     hardware: str
     timestamp: datetime
-    temp: float
+    temperature: float
     humidity: float
     co2: float
     risk: str = Field(..., pattern="^(alto|normal|bajo)$")

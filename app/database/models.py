@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, insert
 from datetime import datetime, timezone
-from ..db import Base, engine
+from ..db import Base
 from app.services.auth_services import get_password_hash
 
 class Records(Base):
@@ -9,7 +9,7 @@ class Records(Base):
     id = Column(Integer, primary_key=True, index=True)
     hardware = Column(String(50), nullable=False) 
     timestamp = Column(DateTime, nullable=False)
-    temp = Column(Float, nullable=False)
+    temperature = Column(Float, nullable=False)
     humidity = Column(Float, nullable=False)
     co2 = Column(Float, nullable=False)
     risk = Column(String(20), nullable=False) #alto, normal, bajo
