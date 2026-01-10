@@ -9,7 +9,6 @@ from app.services import auth_services
 
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="CO2 Monitoring Backend")
-app.include_router(auth.router, prefix='/auth', tags=['auth'])
 
 @app.get("/")
 def home():

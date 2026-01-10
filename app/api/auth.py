@@ -34,13 +34,24 @@ async def login_for_access_token(
 @router.post('/register', response_model=schemas.User, tags=['auth'])
 def register_user(
     user: schemas.UserCreate,
-    password: schemas.UserCreate,
-    role: schemas.UserCreate,
     db: Session = Depends(get_db)):
     
     db_user = db.query(models.Users).filter(models.Users.username == user.username).first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username already registered")
-    
-    new_user = auth_services.create_user(db, user, password, role)
+    hashed_password = auth_services.get_password_hash(user.password)
+    new_user = models.Users(
+        username=user.username,
+        password=hashed_password,
+        role=user.role
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
     return new_user
+
+@router.get('/me', response_model=schemas.User, tags=['auth'])
+async def read_users_me(
+    current_user: Annotated[models.Users, Depends(auth_services.get_current_user)]):
+    return current_user
