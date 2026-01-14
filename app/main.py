@@ -1,9 +1,12 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Request
+from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from typing import List, Annotated
 from app.db import get_db, Base, engine
 from sqlalchemy.orm import Session
 from app.database import models
 from app.database import schemas
-from typing import List, Annotated
 from app.api import auth
 from app.services import auth_services
 
@@ -11,9 +14,16 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="CO2 Monitoring Backend")
 app.include_router(auth.router)
 
-@app.get("/")
-def home():
-    return {"message": "Backend is running"}
+
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
+
+@app.get("/", response_class=HTMLResponse, tags=['view'])
+def home(request: Request):
+    return templates.TemplateResponse(request=request, name='dashboard.html') 
+@app.get('/login', response_class=HTMLResponse, tags=['view'])
+def login(request: Request):
+    return templates.TemplateResponse(request=request, name='login.html')
 
 @app.get('/records', response_model=List[schemas.Record], tags=['records'])
 def read_records(
