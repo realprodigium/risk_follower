@@ -20,8 +20,7 @@
         <h1>LAN Monitor</h1>
         <p class="subtitle">Sistema de Monitoreo CO2</p>
       </header>
-
-      <form class="form" method="POST" action="/login">
+      <form class="form" id="login-form">
         <div class="input-group">
           <label for="username">Usuario</label>
           <div class="input-wrapper">
@@ -54,7 +53,7 @@
       </form>
     </section>
   </main>
-
-  <script src="{{ url_for('static', path='js/script.js') }}"></script>
+  <script src="{{ url_for('static', path='js/login.js') }}"></script>
+  
 </body>
 </html>
