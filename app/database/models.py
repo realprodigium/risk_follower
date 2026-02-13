@@ -32,7 +32,3 @@ class Users(Base):
     role = Column(String(20), nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc)) #utcnow deprecated
 
-stmt = insert(Users).values(
-    username='administrador', 
-    password=get_password_hash('passwordadmin'), 
-    role='admin')

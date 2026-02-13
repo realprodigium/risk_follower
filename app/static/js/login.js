@@ -19,7 +19,7 @@ async function login(username, password) {
         formData.append('username', username);
         formData.append('password', password);
         
-        const response = await fetch('/token', {
+        const response = await fetch('/auth/token', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'

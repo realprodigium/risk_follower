@@ -9,25 +9,116 @@
 <body>
     <header>
         <nav>
-            <h2>CO2 Monitor</h2>
-            <div>
-                <span id="user-display">Cargando...</span>
-                <span id="user-role">(--)</span>
-                <button id="logout-btn">Salir</button>
+            <div class="nav-brand">
+                <h2>CO2 Monitor</h2>
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>LIVE</span>
+                </div>
+            </div>
+            <div class="nav-menu">
+                <a href="#" class="nav-link">Dashboard</a>
+                <a href="#" class="nav-link">ML Predictions</a>
+                <a href="#" class="nav-link">Data Table</a>
+                <a href="#" class="nav-link">Export CSV</a>
+            </div>
+            <div class="nav-user">
+                <div class="user-info">
+                    <span id="user-display">Loading...</span>
+                    <span id="user-role">(--)</span>
+                </div>
+                <button id="logout-btn">Logout</button>
             </div>
         </nav>
     </header>
 
-    <section>
-        <div id="data-container">
-            <div id="line"></div>
-            <div id="area"></div>
+    <main>
+        <!-- Gauge Cards -->
+        <div class="dashboard-grid">
+            <div class="gauge-card" id="temp-gauge" style="--accent-color: #ef4444;">
+                <div class="gauge-header">
+                    <span class="gauge-title">Temperature</span>
+                    <span class="gauge-unit">°C</span>
+                </div>
+                <div class="gauge-display">
+                    <span class="gauge-value" id="temp-value">--</span>
+                    <span class="gauge-label">°C</span>
+                </div>
+                <div class="gauge-bar">
+                    <div class="gauge-fill" id="temp-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="gauge-card" id="humidity-gauge" style="--accent-color: #3b82f6;">
+                <div class="gauge-header">
+                    <span class="gauge-title">Humidity</span>
+                    <span class="gauge-unit">%</span>
+                </div>
+                <div class="gauge-display">
+                    <span class="gauge-value" id="humidity-value">--</span>
+                    <span class="gauge-label">%</span>
+                </div>
+                <div class="gauge-bar">
+                    <div class="gauge-fill" id="humidity-bar" style="width: 0%;"></div>
+                </div>
+            </div>
+
+            <div class="gauge-card" id="co2-gauge" style="--accent-color: #10b981;">
+                <div class="gauge-header">
+                    <span class="gauge-title">CO2 Level</span>
+                    <span class="gauge-unit">PPM</span>
+                </div>
+                <div class="gauge-display">
+                    <span class="gauge-value" id="co2-value">--</span>
+                    <span class="gauge-label">PPM</span>
+                </div>
+                <div class="gauge-bar">
+                    <div class="gauge-fill" id="co2-bar" style="width: 0%;"></div>
+                </div>
+            </div>
         </div>
-    </section>
+
+        <!-- Chart Section -->
+        <div class="chart-section">
+            <div class="chart-header">
+                <h3 class="chart-title">Real-Time Monitoring</h3>
+                <div class="chart-controls">
+                    <button class="chart-btn active" data-timerange="1m">1M</button>
+                    <button class="chart-btn" data-timerange="5m">5M</button>
+                    <button class="chart-btn" data-timerange="15m">15M</button>
+                    <button class="chart-btn" data-timerange="1h">1H</button>
+                </div>
+            </div>
+            <div id="main-chart"></div>
+        </div>
+
+        <!-- Data Table -->
+        <div class="table-section">
+            <div class="table-header">
+                <h3 class="table-title">Recent Data (Last 5 Records)</h3>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Source</th>
+                        <th>Temperature</th>
+                        <th>Humidity</th>
+                        <th>CO2</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="data-table-body">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--gray-500);">Loading data...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
     
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="{{ url_for('static', path='js/auth.js') }}"></script>
     <script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
-    <script src="{{ url_for('static', path='js/charts.js') }}"></script>
 </body>
 </html>
