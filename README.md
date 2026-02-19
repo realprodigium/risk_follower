@@ -33,7 +33,7 @@ IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at 
 - Websockets (starlette)
 
 **Frontend:**
-soon
+- HTML | CSS | JS
   
 **University**: Universidad Cooperativa de Colombia
 
