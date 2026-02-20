@@ -1,15 +1,15 @@
 # Craft Brewery CO2 Monitor by Fermentation process
 
-IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at any point with fermentation activity by craft brewery. Additionally, predictive capabilities through classification-based machine learning. 
+IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at any point with fermentation activity by craft brewery. 
 
 ## Features
 
-- **Real-time Monitoring** (latency < 1s) MQTT
-- **Predictions** XGBoost classifier (y/n)
-- **API REST** Historical data queries
-- **WebSockets** Backend to Frontend
-- **Auth JWT** roles access control (LAN)
+- **Real-time Monitoring** (latency < 1s) MQTT from arduino IDE
+- **API REST** Historical data queries, export data to CSV
+- **WebSockets** Backend to Frontend connection
+- **Security** JWT, Roles Access Control, Hashed Passwords, HTTPS
 - **PostgreSQL DB** Main DB
+- **Architecture** Layer Architecture
 
 ## Stack
 
@@ -17,13 +17,14 @@ IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at 
 - FastAPI (framework)
 - SQLAlchemy + PostgreSQL (data layer)
 - aiomqtt client sub (hardware to backend)
-- XGBoost Library (ML)
-- fastapi.security (Auth|Tokenizer|Access)
+- fastapi.security (Auth | Tokenizer | Access)
 
 **Middleware: backend-hardware**
+
 - Broker: EMQX
 
 **Hardware:**
+
 - ESP32 Dev Kit wifi
 - Arduino IDE
 - mqtt library
@@ -33,8 +34,11 @@ IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at 
 - Websockets (starlette)
 
 **Frontend:**
-soon
+
+- HTML
+- CSS
+- JavaScript
   
 **University**: Universidad Cooperativa de Colombia
 
-**Year**: 2025-26
+**Year**: 2025-I | 2025-II | 2026-I

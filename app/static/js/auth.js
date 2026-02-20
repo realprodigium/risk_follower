@@ -41,7 +41,7 @@ async function checkAuth() {
     // - El token podría haber sido manipulado
     
     try {
-        const response = await fetch('/me', {
+        const response = await fetch('/auth/me', {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`

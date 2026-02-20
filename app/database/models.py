@@ -1,7 +1,6 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime, insert
+from sqlalchemy import Column, Integer, String, ForeignKey, Float, DateTime
 from datetime import datetime, timezone
 from ..db import Base
-from app.services.auth_services import get_password_hash
 
 class Records(Base):
     __tablename__ = 'records'
