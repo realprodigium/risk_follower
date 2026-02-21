@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - CO2 Monitor</title>
+    <title>Panel de Vista - CO2 Monitor</title>
     <link href="{{ url_for('static', path='css/dashboard.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -13,31 +13,29 @@
                 <h2>CO2 Monitor</h2>
                 <div class="status-indicator">
                     <span class="status-dot"></span>
-                    <span>LIVE</span>
+                    <span>Activo</span>
                 </div>
             </div>
             <div class="nav-menu">
                 <a href="#" class="nav-link">Dashboard</a>
-                <a href="#" class="nav-link">ML Predictions</a>
-                <a href="#" class="nav-link">Data Table</a>
-                <a href="#" class="nav-link">Export CSV</a>
+                <a href="#" class="nav-link">Ver tabla</a>
+                <a href="#" class="nav-link">Exportar</a>
             </div>
             <div class="nav-user">
                 <div class="user-info">
-                    <span id="user-display">Loading...</span>
+                    <span id="user-display">Cargando...</span>
                     <span id="user-role">(--)</span>
                 </div>
-                <button id="logout-btn">Logout</button>
+                <button id="logout-btn">Cerrar Sesión</button>
             </div>
         </nav>
     </header>
 
     <main>
-        <!-- Gauge Cards -->
         <div class="dashboard-grid">
             <div class="gauge-card" id="temp-gauge" style="--accent-color: #ef4444;">
                 <div class="gauge-header">
-                    <span class="gauge-title">Temperature</span>
+                    <span class="gauge-title">Temperatura</span>
                     <span class="gauge-unit">°C</span>
                 </div>
                 <div class="gauge-display">
@@ -51,7 +49,7 @@
 
             <div class="gauge-card" id="humidity-gauge" style="--accent-color: #3b82f6;">
                 <div class="gauge-header">
-                    <span class="gauge-title">Humidity</span>
+                    <span class="gauge-title">Humedad</span>
                     <span class="gauge-unit">%</span>
                 </div>
                 <div class="gauge-display">
@@ -65,7 +63,7 @@
 
             <div class="gauge-card" id="co2-gauge" style="--accent-color: #10b981;">
                 <div class="gauge-header">
-                    <span class="gauge-title">CO2 Level</span>
+                    <span class="gauge-title">Nivel de CO2</span>
                     <span class="gauge-unit">PPM</span>
                 </div>
                 <div class="gauge-display">
@@ -78,39 +76,37 @@
             </div>
         </div>
 
-        <!-- Chart Section -->
         <div class="chart-section">
             <div class="chart-header">
-                <h3 class="chart-title">Real-Time Monitoring</h3>
+                <h3 class="chart-title">Monitoreo en Tiempo Real</h3>
                 <div class="chart-controls">
                     <button class="chart-btn active" data-timerange="1m">1M</button>
-                    <button class="chart-btn" data-timerange="5m">5M</button>
-                    <button class="chart-btn" data-timerange="15m">15M</button>
+                    <button class="chart-btn" data-timerange="5m">5m</button>
+                    <button class="chart-btn" data-timerange="15m">15m</button>
                     <button class="chart-btn" data-timerange="1h">1H</button>
                 </div>
             </div>
             <div id="main-chart"></div>
         </div>
 
-        <!-- Data Table -->
         <div class="table-section">
             <div class="table-header">
-                <h3 class="table-title">Recent Data (Last 5 Records)</h3>
+                <h3 class="table-title">Datos (Ultimos 5)</h3>
             </div>
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Timestamp</th>
-                        <th>Source</th>
-                        <th>Temperature</th>
-                        <th>Humidity</th>
+                        <th>Fecha y Hora</th>
+                        <th>Fuente</th>
+                        <th>Temperatura</th>
+                        <th>Humedad</th>
                         <th>CO2</th>
-                        <th>Status</th>
+                        <th>Estado</th>
                     </tr>
                 </thead>
                 <tbody id="data-table-body">
                     <tr>
-                        <td colspan="6" style="text-align: center; color: var(--gray-500);">Loading data...</td>
+                        <td colspan="6" style="text-align: center; color: var(--gray-500);">Cargando datos...</td>
                     </tr>
                 </tbody>
             </table>

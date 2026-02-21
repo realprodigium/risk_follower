@@ -50,7 +50,5 @@ var options = {
     ]
   }
 };
-
 var chart = new ApexCharts(document.querySelector("#area"), options);
-
 chart.render();

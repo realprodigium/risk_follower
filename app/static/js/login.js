@@ -9,9 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await login(username, password);
     });
 });
-
-
-
 async function login(username, password) {
     try {
         
@@ -46,8 +43,6 @@ async function login(username, password) {
         showError('Error de conexión');
     }
 }
-
-
 function showError(message) {
     let errorDiv = document.querySelector('.error-message');
     
@@ -65,8 +60,6 @@ function showError(message) {
         `;
         document.querySelector('.form').appendChild(errorDiv);
     }
-    
     errorDiv.textContent = message;
-    
     setTimeout(() => errorDiv.remove(), 5000);
 }

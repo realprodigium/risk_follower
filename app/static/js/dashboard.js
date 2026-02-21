@@ -180,10 +180,6 @@ function initializeChart() {
     chart = new ApexCharts(document.querySelector("#main-chart"), options);
     chart.render();
 }
-
-// ============================================================
-// DATA SIMULATION
-// ============================================================
 function generateSensorData() {
     const now = new Date();
     
