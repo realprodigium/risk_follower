@@ -5,6 +5,10 @@ import jwt
 from dotenv import load_dotenv
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
+<<<<<<< Updated upstream
+=======
+from pwdlib.hashers.bcrypt import BcryptHasher
+>>>>>>> Stashed changes
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -17,7 +21,11 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = os.getenv('ALGORITHM')
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES'))
 
+<<<<<<< Updated upstream
 password_hash = PasswordHash.recommended()
+=======
+password_hash = PasswordHash((BcryptHasher(),))
+>>>>>>> Stashed changes
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
 
 
