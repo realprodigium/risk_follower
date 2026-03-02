@@ -1,6 +1,6 @@
 # Craft Brewery CO2 Monitor by Fermentation process
 
-IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at any point with fermentation activity by craft brewery. 
+Web Application in real-time for monitoring (temp, hum, co2) at any point with fermentation activity by craft brewery. 
 
 ## Features
 
@@ -22,12 +22,6 @@ IoT+ML+Web. LAN Web Application in real-time for monitoring (temp, hum, co2) at 
 **Middleware: backend-hardware**
 
 - Broker: EMQX
-
-**Hardware:**
-
-- ESP32 Dev Kit wifi
-- Arduino IDE
-- mqtt library
 
 **Middleware: backend-frontend**
 
