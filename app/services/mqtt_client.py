@@ -13,10 +13,9 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-MQTT_BROKER = os.getenv('MQTT_BROKER', 'broker.emqx.io') # Fallback for dev
-MQTT_PORT = int(os.getenv('MQTT_PORT', 1883))
-MQTT_TOPIC = os.getenv('MQTT_TOPIC', 'co2/monitor')
-
+MQTT_BROKER = os.getenv('MQTT_BROKER') # Fallback for dev
+MQTT_PORT = int(os.getenv('MQTT_PORT'))
+MQTT_TOPIC = os.getenv('MQTT_TOPIC')
 
 class MQTTSubscriber:
     def __init__(self):
