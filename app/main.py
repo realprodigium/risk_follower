@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.db import Base, engine
 from app.api import auth, routes
 from app.services.mqtt_client import mqtt_subscriber
+from app.services.websockets import router as ws_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -36,6 +37,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 app.include_router(auth.router, prefix="/auth")
 app.include_router(routes.router)
+app.include_router(ws_router)
 
 @app.get("/login", response_class=HTMLResponse, tags=['view'])
 def login_page(request: Request):

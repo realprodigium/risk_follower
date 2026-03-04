@@ -5,6 +5,7 @@ from datetime import datetime
 from aiomqtt import Client
 from app.db import SessionLocal
 from app.database.models import Records
+from app.services.sensor_broadcast import broadcast_sensor_data
 import os
 from dotenv import load_dotenv
 
@@ -28,7 +29,7 @@ class MQTTSubscriber:
             record = Records(
                 hardware=payload.get('hardware', 'Unknown_ESP32'),
                 timestamp=datetime.fromisoformat(payload['timestamp']),
-                temperature=float(payload.get('temp', payload.get('temperature', 0.0))), # Handle both keys
+                temperature=float(payload.get('temp', payload.get('temperature', 0.0))), 
                 humidity=float(payload['humidity']),
                 co2=float(payload['co2']),
                 risk=payload.get('risk', 'normal') 
@@ -39,6 +40,10 @@ class MQTTSubscriber:
             db.refresh(record)
             
             logger.info(f"MQTT Record saved: ID {record.id} | CO2: {record.co2} ppm | Temp: {record.temperature}")
+            
+            # Broadcast data to WebSocket clients
+            await broadcast_sensor_data(record)
+            
             return record
             
         except KeyError as e:

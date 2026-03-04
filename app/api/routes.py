@@ -38,7 +38,6 @@ def create_record(
     logger.info(f"Record created: {new_record.id} -> {new_record.co2}ppm")
     return new_record
 
-
 @router.delete('/records/{record_id}', tags=['records'])
 def delete_record(
     record_id: int,
@@ -54,12 +53,3 @@ def delete_record(
     logger.info(f"Record deleted: {record_id} by {current_user.username}")
     return {"message": f"Record {record_id} deleted successfully"}
 
-@router.get('/predictions', response_model=List[schemas.Prediction], tags=['predictions'])
-def read_predictions(
-    db: Session = Depends(get_db),
-    current_user: models.Users = Depends(auth_services.get_current_user)
-):
-    predictions = db.query(models.Predictions).all()
-    if not predictions:
-        raise HTTPException(status_code=404, detail="No predictions found")
-    return predictions

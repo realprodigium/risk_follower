@@ -86,6 +86,18 @@ nav {
     animation: pulse 2s ease-in-out infinite;
 }
 
+/* WebSocket Connection Status */
+.connection-status.connected .status-dot {
+    background: var(--accent-green);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.connection-status:not(.connected) .status-dot {
+    background: var(--accent-red);
+    animation: none;
+    opacity: 0.6;
+}
+
 @keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }

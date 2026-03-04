@@ -6,3 +6,6 @@ __pycache__/
 env
 datasets/
 *.pyc
+.env.example
+test_mqtt_sensor.py
+seed_users.py

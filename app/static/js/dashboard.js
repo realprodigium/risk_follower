@@ -7,11 +7,14 @@ let dataHistory = {
 };
 let recentRecords = [];
 const MAX_DATA_POINTS = 50;
-const UPDATE_INTERVAL = 1000; 
+let websocket = null;
+let ws_reconnect_attempts = 0;
+const WS_MAX_RECONNECT_ATTEMPTS = 5;
+const WS_RECONNECT_DELAY = 3000;
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeChart();
-    startDataSimulation();
+    connectWebSocket();
     setupChartControls();
 });
 
@@ -180,68 +183,97 @@ function initializeChart() {
     chart = new ApexCharts(document.querySelector("#main-chart"), options);
     chart.render();
 }
-function generateSensorData() {
-    const now = new Date();
+
+function connectWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/sensor-data`;
     
-    // Generate realistic sensor values with some variation
-    const baseTemp = 22;
-    const baseHumidity = 65;
-    const baseCO2 = 800;
+    console.log(`Conectando a WebSocket: ${wsUrl}`);
     
-    const temperature = baseTemp + (Math.random() * 10 - 5);
-    const humidity = baseHumidity + (Math.random() * 20 - 10);
-    const co2 = baseCO2 + (Math.random() * 400 - 200);
+    websocket = new WebSocket(wsUrl);
     
-    // Determine risk level based on CO2
-    let risk = 'normal';
-    if (co2 > 1200) {
-        risk = 'alto';
-    } else if (co2 < 400) {
-        risk = 'bajo';
-    }
+    websocket.onopen = (event) => {
+        console.log('WebSocket conexión establecida');
+        ws_reconnect_attempts = 0;
+        updateConnectionStatus(true);
+    };
     
-    return {
-        timestamp: now,
-        hardware: 'ESP32_001',
-        temperature: parseFloat(temperature.toFixed(1)),
-        humidity: parseFloat(humidity.toFixed(1)),
-        co2: parseFloat(co2.toFixed(0)),
-        risk: risk
+    websocket.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'historical' || data.type === 'realtime') {
+                const sensorData = {
+                    timestamp: new Date(data.timestamp),
+                    hardware: data.hardware,
+                    temperature: parseFloat(data.temperature),
+                    humidity: parseFloat(data.humidity),
+                    co2: parseFloat(data.co2),
+                    risk: data.risk
+                };
+                
+                if (data.type === 'realtime' || !isDataDuplicate(sensorData)) {
+                    updateDashboard(sensorData);
+                }
+            }
+        } catch (error) {
+            console.error('Error procesando mensaje WebSocket:', error);
+        }
+    };
+    
+    websocket.onerror = (error) => {
+        console.error('Error WebSocket:', error);
+        updateConnectionStatus(false);
+    };
+    
+    websocket.onclose = (event) => {
+        console.log('WebSocket desconectado');
+        updateConnectionStatus(false);
+        
+        if (ws_reconnect_attempts < WS_MAX_RECONNECT_ATTEMPTS) {
+            ws_reconnect_attempts++;
+            console.log(`Reintentando conexión (${ws_reconnect_attempts}/${WS_MAX_RECONNECT_ATTEMPTS}) en ${WS_RECONNECT_DELAY}ms...`);
+            setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
+        }
     };
 }
 
-function startDataSimulation() {
-    setInterval(() => {
-        const newData = generateSensorData();
-        updateDashboard(newData);
-    }, UPDATE_INTERVAL);
+function isDataDuplicate(newData) {
+    if (recentRecords.length === 0) return false;
+    
+    const lastRecord = recentRecords[0];
+    return (
+        Math.abs(lastRecord.timestamp - newData.timestamp) < 100 &&
+        lastRecord.hardware === newData.hardware
+    );
 }
 
+function updateConnectionStatus(isConnected) {
+    const statusIndicator = document.querySelector('.connection-status');
+    if (statusIndicator) {
+        statusIndicator.classList.toggle('connected', isConnected);
+        statusIndicator.title = isConnected ? 'Conectado' : 'Desconectado';
+    }
+}
 function updateDashboard(data) {
-    // Update gauges
     updateGauges(data);
-    
-    // Update chart
+
     updateChart(data);
     
-    // Update table
     updateTable(data);
 }
 
 function updateGauges(data) {
-    // Temperature gauge (0-50°C)
     const tempValue = document.getElementById('temp-value');
     const tempBar = document.getElementById('temp-bar');
     tempValue.textContent = data.temperature.toFixed(1);
     tempBar.style.width = `${(data.temperature / 50) * 100}%`;
     
-    // Humidity gauge (0-100%)
     const humidityValue = document.getElementById('humidity-value');
     const humidityBar = document.getElementById('humidity-bar');
     humidityValue.textContent = data.humidity.toFixed(1);
     humidityBar.style.width = `${data.humidity}%`;
     
-    // CO2 gauge (0-2000 PPM)
     const co2Value = document.getElementById('co2-value');
     const co2Bar = document.getElementById('co2-bar');
     co2Value.textContent = data.co2.toFixed(0);
