@@ -15,16 +15,6 @@ class Record(RecordCreate):
     class Config:
         from_attributes = True
 
-class PredictionCreate(BaseModel):
-    records_id: int
-    prediction: str = Field(..., pattern="^(alto|normal|bajo)$")
-
-class Prediction(PredictionCreate):
-    id: int
-    created_at: datetime
-    class Config:
-        from_attributes = True
-
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
     password: str = Field(..., min_length=8)
