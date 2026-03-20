@@ -5,7 +5,7 @@ from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.database import models
-from datetime import datetime, timezone, timezone
+from datetime import datetime, timezone
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -61,10 +61,15 @@ async def websocket_sensor_data(websocket: WebSocket):
             # Invertir para mantener cronologia
             recent_records.reverse()
             for record in recent_records:
+                # Asegurar que el timestamp tenga timezone UTC para ser consistente
+                # con los datos en tiempo real (que usan datetime.now(timezone.utc))
+                ts = record.timestamp
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
                 data = {
                     "type": "historical",
                     "id": record.id,
-                    "timestamp": record.timestamp.isoformat(),
+                    "timestamp": ts.isoformat(),
                     "hardware": record.hardware,
                     "temperature": record.temperature,
                     "humidity": record.humidity,

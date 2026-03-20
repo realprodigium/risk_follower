@@ -3,117 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Vista - CO2 Monitor</title>
-    <link href="{{ url_for('static', path='css/dashboard.css') }}" rel="stylesheet">
+    <title>Cerveceria Seven Waves - Dashboard</title>
+    <meta name="description" content="Sistema de monitoreo en tiempo real de CO2, temperatura y humedad para cervecería.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/main.css') }}" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <nav>
-            <div class="nav-brand">
-                <h2>CO2 Monitor</h2>
-                <div class="status-indicator connection-status" title="Desconectado">
-                    <span class="status-dot"></span>
-                    <span>WebSocket</span>
+
+    <div id="alarm-banner" class="alarm-banner hidden">
+        <div class="alarm-banner-inner">
+            <div class="alarm-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <div class="alarm-text">
+                <span class="alarm-label">ALERTA DE CONDICIÓN</span>
+                <span id="alarm-message">Niveles fuera de rango detectados</span>
+            </div>
+            <div class="alarm-sensors" id="alarm-sensors"></div>
+            <button class="alarm-dismiss" id="alarm-dismiss">✕</button>
+        </div>
+    </div>
+
+    <header class="topbar">
+        <div class="topbar-inner">
+            <div class="brand">
+                <div class="brand-text">
+                    <span class="brand-name">Cerveceria Seven Waves</span>
+                    <span class="brand-sub">Monitoreo y seguimiento en tiempo real</span>
+                </div>
+                <div class="connection-pill" id="ws-status">
+                    <div class="conn-dot"></div>
+                    <span>Conectando...</span>
                 </div>
             </div>
-            <div class="nav-menu">
-                <a href="#" class="nav-link">Dashboard</a>
-                <a href="#" class="nav-link">Ver tabla</a>
-                <a href="#" class="nav-link">Exportar</a>
-            </div>
-            <div class="nav-user">
+
+            <nav class="top-nav">
+                <a href="/" class="nav-item active" id="nav-dashboard">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    Dashboard
+                </a>
+                <a href="/history" class="nav-item" id="nav-history" target="_blank">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Historial
+                </a>
+                <button class="nav-item nav-btn" id="export-btn">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Exportar CSV
+                </button>
+            </nav>
+
+            <div class="user-zone">
+                <div class="user-avatar" id="user-avatar">U</div>
                 <div class="user-info">
                     <span id="user-display">Cargando...</span>
-                    <span id="user-role">(--)</span>
+                    <span id="user-role">--</span>
                 </div>
-                <button id="logout-btn">Cerrar Sesión</button>
+                <button class="logout-btn" id="logout-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Salir
+                </button>
             </div>
-        </nav>
+        </div>
     </header>
 
-    <main>
-        <div class="dashboard-grid">
-            <div class="gauge-card" id="temp-gauge" style="--accent-color: #ef4444;">
-                <div class="gauge-header">
-                    <span class="gauge-title">Temperatura</span>
-                    <span class="gauge-unit">°C</span>
-                </div>
-                <div class="gauge-display">
-                    <span class="gauge-value" id="temp-value">--</span>
-                    <span class="gauge-label">°C</span>
-                </div>
-                <div class="gauge-bar">
-                    <div class="gauge-fill" id="temp-bar" style="width: 0%;"></div>
-                </div>
-            </div>
+    <main class="main-layout">
 
-            <div class="gauge-card" id="humidity-gauge" style="--accent-color: #3b82f6;">
-                <div class="gauge-header">
-                    <span class="gauge-title">Humedad</span>
-                    <span class="gauge-unit">%</span>
+        <div class="status-bar">
+            <div class="status-bar-left">
+                <div class="current-status-pill" id="current-status-pill">
+                    <span class="status-dot-lg"></span>
+                    <span id="current-status-label">Sin datos</span>
                 </div>
-                <div class="gauge-display">
-                    <span class="gauge-value" id="humidity-value">--</span>
-                    <span class="gauge-label">%</span>
-                </div>
-                <div class="gauge-bar">
-                    <div class="gauge-fill" id="humidity-bar" style="width: 0%;"></div>
-                </div>
+                <span class="last-update-label">Última lectura: <span id="last-update-time">--</span></span>
             </div>
-
-            <div class="gauge-card" id="co2-gauge" style="--accent-color: #10b981;">
-                <div class="gauge-header">
-                    <span class="gauge-title">Nivel de CO2</span>
-                    <span class="gauge-unit">PPM</span>
-                </div>
-                <div class="gauge-display">
-                    <span class="gauge-value" id="co2-value">--</span>
-                    <span class="gauge-label">PPM</span>
-                </div>
-                <div class="gauge-bar">
-                    <div class="gauge-fill" id="co2-bar" style="width: 0%;"></div>
+            <div class="status-bar-right">
+                <span class="sensor-filter-label">Sensor:</span>
+                <div class="sensor-tabs" id="sensor-tabs">
+                    <button class="sensor-tab active" data-hardware="all" id="tab-all">Todos</button>
                 </div>
             </div>
         </div>
 
-        <div class="chart-section">
-            <div class="chart-header">
-                <h3 class="chart-title">Monitoreo en Tiempo Real</h3>
+        <div class="metrics-grid">
+            <div class="metric-card" id="card-temp">
+                <div class="metric-card-top">
+                    <div class="metric-icon metric-icon--temp">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>
+                    </div>
+                    <div class="metric-meta">
+                        <span class="metric-label">Temperatura</span>
+                        <span class="metric-unit">°C</span>
+                    </div>
+                    <div class="metric-trend" id="temp-trend">
+                        <svg class="trend-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    </div>
+                </div>
+                <div class="metric-value-row">
+                    <span class="metric-value" id="temp-value">--</span>
+                    <span class="metric-value-unit">°C</span>
+                </div>
+                <div class="metric-sparkline">
+                    <canvas id="temp-sparkline" height="40"></canvas>
+                </div>
+                <div class="metric-bar-track">
+                    <div class="metric-bar-fill" id="temp-bar" style="width:0%;background:var(--red)"></div>
+                </div>
+                <div class="metric-range">
+                    <span>0°C</span>
+                    <span>50°C</span>
+                </div>
+            </div>
+
+            <div class="metric-card" id="card-humidity">
+                <div class="metric-card-top">
+                    <div class="metric-icon metric-icon--humidity">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                    </div>
+                    <div class="metric-meta">
+                        <span class="metric-label">Humedad</span>
+                        <span class="metric-unit">%</span>
+                    </div>
+                    <div class="metric-trend" id="humidity-trend">
+                        <svg class="trend-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    </div>
+                </div>
+                <div class="metric-value-row">
+                    <span class="metric-value" id="humidity-value">--</span>
+                    <span class="metric-value-unit">%</span>
+                </div>
+                <div class="metric-sparkline">
+                    <canvas id="humidity-sparkline" height="40"></canvas>
+                </div>
+                <div class="metric-bar-track">
+                    <div class="metric-bar-fill" id="humidity-bar" style="width:0%;background:var(--blue)"></div>
+                </div>
+                <div class="metric-range">
+                    <span>0%</span>
+                    <span>100%</span>
+                </div>
+            </div>
+            <div class="metric-card" id="card-co2">
+                <div class="metric-card-top">
+                    <div class="metric-icon metric-icon--co2">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    </div>
+                    <div class="metric-meta">
+                        <span class="metric-label">CO2</span>
+                        <span class="metric-unit">PPM</span>
+                    </div>
+                    <div class="metric-trend" id="co2-trend">
+                        <svg class="trend-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                    </div>
+                </div>
+                <div class="metric-value-row">
+                    <span class="metric-value" id="co2-value">--</span>
+                    <span class="metric-value-unit">PPM</span>
+                </div>
+                <div class="metric-sparkline">
+                    <canvas id="co2-sparkline" height="40"></canvas>
+                </div>
+                <div class="metric-bar-track">
+                    <div class="metric-bar-fill" id="co2-bar" style="width:0%;background:var(--green)"></div>
+                </div>
+                <div class="metric-range">
+                    <span>0</span>
+                    <span>1000 PPM</span>
+                </div>
+            </div>
+
+            <div class="metric-card metric-card--status" id="card-status">
+                <div class="metric-card-top">
+                    <div class="metric-meta">
+                        <span class="metric-label">Estado Actual</span>
+                        <span class="metric-unit">Condición</span>
+                    </div>
+                </div>
+                <div class="status-display" id="status-display">
+                    <div class="big-status-badge" id="big-status-badge">
+                        <span class="big-status-dot"></span>
+                        <span id="big-status-text">Sin datos</span>
+                    </div>
+                    <div class="status-details">
+                        <div class="status-detail-row">
+                            <span>Dispositivo:</span>
+                            <span id="status-hardware">--</span>
+                        </div>
+                        <div class="status-detail-row">
+                            <span>Lecturas hoy:</span>
+                            <span id="status-count">0</span>
+                        </div>
+                        <div class="status-detail-row">
+                            <span>Alarmas hoy:</span>
+                            <span id="status-alarms">0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-card-header">
+                <div class="chart-title-group">
+                    <h2 class="chart-title">Monitoreo en Tiempo Real</h2>
+                    <span class="chart-subtitle" id="chart-point-count">0 puntos</span>
+                </div>
                 <div class="chart-controls">
-                    <button class="chart-btn active" data-timerange="1m">1M</button>
-                    <button class="chart-btn" data-timerange="5m">5m</button>
-                    <button class="chart-btn" data-timerange="15m">15m</button>
-                    <button class="chart-btn" data-timerange="1h">1H</button>
+                    <div class="timerange-group">
+                        <button class="trange-btn active" data-mins="1" id="trange-1m">1 min</button>
+                        <button class="trange-btn" data-mins="5" id="trange-5m">5 min</button>
+                        <button class="trange-btn" data-mins="15" id="trange-15m">15 min</button>
+                        <button class="trange-btn" data-mins="60" id="trange-1h">1 hora</button>
+                        <button class="trange-btn" data-mins="0" id="trange-all">Todo</button>
+                    </div>
                 </div>
             </div>
-            <div id="main-chart"></div>
+            <div id="main-chart" style="width:100%;height:380px;"></div>
         </div>
 
-        <div class="table-section">
-            <div class="table-header">
-                <h3 class="table-title">Datos (Ultimos 5)</h3>
+        <div class="table-card">
+            <div class="table-card-header">
+                <h3 class="table-card-title">Lecturas Recientes</h3>
+                <span class="table-card-sub">Últimas 10 entradas en tiempo real</span>
             </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Fecha y Hora</th>
-                        <th>Fuente</th>
-                        <th>Temperatura</th>
-                        <th>Humedad</th>
-                        <th>CO2</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="data-table-body">
-                    <tr>
-                        <td colspan="6" style="text-align: center; color: var(--gray-500);">Cargando datos...</td>
-                    </tr>
-                </tbody>
-            </table>
+            <div class="table-wrapper">
+                <table class="data-table" id="recent-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Fuente</th>
+                            <th>Temp (°C)</th>
+                            <th>Humedad (%)</th>
+                            <th>CO2 (PPM)</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-table-body">
+                        <tr class="empty-row">
+                            <td colspan="6">
+                                <div class="empty-state">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <span>Esperando datos del sensor...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
     </main>
-    
-    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="{{ url_for('static', path='js/auth.js') }}"></script>
     <script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
 </body>

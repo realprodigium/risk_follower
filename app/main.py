@@ -46,8 +46,16 @@ def login_page(request: Request):
 @app.get("/", response_class=HTMLResponse, tags=['view'])
 async def dashboard(request: Request):
     return templates.TemplateResponse(
-        request=request, 
+        request=request,
         name='dashboard.html',
+        context={}
+    )
+
+@app.get("/history", response_class=HTMLResponse, tags=['view'])
+async def history_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name='history.html',
         context={}
     )
 

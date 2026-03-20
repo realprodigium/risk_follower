@@ -1,4 +1,5 @@
 from app.services.websockets import manager
+from datetime import timezone
 import asyncio
 import logging
 
@@ -7,10 +8,14 @@ logger = logging.getLogger(__name__)
 
 async def broadcast_sensor_data(record):
     try:
+        # Ensure timestamp has UTC timezone to match historical data format
+        ts = record.timestamp
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
         sensor_data = {
             "type": "realtime",
             "id": record.id,
-            "timestamp": record.timestamp.isoformat(),
+            "timestamp": ts.isoformat(),
             "hardware": record.hardware,
             "temperature": record.temperature,
             "humidity": record.humidity,

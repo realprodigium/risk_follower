@@ -39,12 +39,17 @@ function updateUserInterface(user) {
     if (userDisplay) {
         userDisplay.textContent = user.username;
     }
-    
+
+    const userAvatar = document.getElementById('user-avatar');
+    if (userAvatar && user.username) {
+        userAvatar.textContent = user.username[0].toUpperCase();
+    }
+
     const userRole = document.getElementById('user-role');
     if (userRole) {
-        userRole.textContent = `(${user.role})`;
+        userRole.textContent = user.role || '';
     }
-    
+
     if (user.role === 'viewer') {
         document.querySelectorAll('.admin-only, .operator-only').forEach(el => {
             el.style.display = 'none';
