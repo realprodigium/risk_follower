@@ -14,6 +14,16 @@ class Records(Base):
     risk = Column(String(20), nullable=False) #alto, normal, bajo
     created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc))
 
+    @staticmethod
+    def reset_data(db):
+        try:
+            db.query(Records).delete()
+            db.commit()
+            return True
+        except Exception:
+            db.rollback()
+            return False
+
 
 class Users(Base):
     __tablename__ = 'users'

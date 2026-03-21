@@ -26,14 +26,15 @@ async function login(username, password) {
         
         if (!response.ok) {
             const error = await response.json();
-            showError(error.detail || 'Error de autenticación');
+            let msg = error.detail || 'Error de autenticación';
+            if (msg === 'Incorrect username or password') msg = 'Credenciales Incorrectas';
+            showError(msg);
             return;
         }
         
         const data = await response.json();
         
         localStorage.setItem('access_token', data.access_token);
-        
         localStorage.setItem('token_type', data.token_type);
         
         window.location.href = '/';
@@ -43,23 +44,34 @@ async function login(username, password) {
         showError('Error de conexión');
     }
 }
+
 function showError(message) {
-    let errorDiv = document.querySelector('.error-message');
-    
-    if (!errorDiv) {
-        errorDiv = document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.style.cssText = `
-            margin-top: 1rem;
-            padding: 0.75rem;
-            background: rgba(220, 38, 38, 0.1);
-            border: 1px solid rgba(220, 38, 38, 0.3);
-            border-radius: 8px;
-            color: #dc2626;
-            font-size: 0.875rem;
-        `;
-        document.querySelector('.form').appendChild(errorDiv);
+    let container = document.querySelector('.notifications-wrapper');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notifications-wrapper';
+        document.querySelector('.card').appendChild(container);
     }
-    errorDiv.textContent = message;
-    setTimeout(() => errorDiv.remove(), 5000);
+
+    container.innerHTML = '';
+
+    const badge = document.createElement('div');
+    badge.className = 'notification-badge';
+    badge.innerHTML = `<span>${message}</span>`;
+
+    container.appendChild(badge);
+
+    setTimeout(() => badge.classList.add('show'), 10);
+    
+    badge.onclick = () => dismissBadge(badge);
+    setTimeout(() => dismissBadge(badge), 5000);
+}
+
+function dismissBadge(badge) {
+    if (badge && badge.parentNode) {
+        badge.classList.remove('show');
+        setTimeout(() => {
+            if (badge.parentNode) badge.remove();
+        }, 300);
+    }
 }

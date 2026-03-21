@@ -4,8 +4,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from app.db import Base, engine
+from app.db import Base, engine, SessionLocal
 from app.api import auth, routes
+from app.database.models import Records
 from app.services.mqtt_client import mqtt_subscriber
 from app.services.websockets import router as ws_router
 
@@ -21,6 +22,14 @@ Base.metadata.create_all(bind=engine)
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Application starting up...")
+    
+    db = SessionLocal()
+    try:
+        if Records.reset_data(db):
+            logger.info("Base de datos de 'records' reiniciada.")
+    finally:
+        db.close()
+        
     await mqtt_subscriber.start()
     yield
     logger.info("Application shutting down...")

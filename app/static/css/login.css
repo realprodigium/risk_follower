@@ -97,7 +97,6 @@ body {
     0 12px 24px var(--glass-shadow),
     0 24px 48px rgba(0, 0, 0, 0.04);
 
-  overflow: hidden;
 }
 
 .card-shine {
@@ -310,11 +309,11 @@ body {
   height: 52px;
   margin-top: var(--space-3);
 
-  font-family: inherit;
-  font-size: 0.9375rem;
+  font-family: var(--font-sans);
+  font-size: 1rem;
   font-weight: 500;
   color: var(--white);
-  letter-spacing: 0.01em;
+  letter-spacing: 0.0.1rem;
 
   background: linear-gradient(180deg, var(--gray-700) 0%, var(--gray-900) 100%);
   border: none;
@@ -572,5 +571,70 @@ body {
 
   .copyright {
     color: var(--gray-600);
+  }
+}
+
+.notifications-wrapper {
+  position: absolute;
+  top: 5%;
+  right: -200px;
+  transform: translateY(-50%) translateX(100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+.notification-badge {
+  background: #cf212fd6;
+  color: #f5f5f5;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+  box-shadow: 10px 10px 30px rgba(255, 71, 87, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-20px) scale(0.9);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  pointer-events: all;
+  border: 1px solid rgba(87, 1, 1, 0.318);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+}
+
+.notification-badge.show {
+  transform: translateX(0) scale(1);
+  opacity: 1;
+}
+
+.notification-badge::before {
+  content: "!";
+  min-width: 18px;
+  height: 18px;
+  background: #f5f5f5;
+  color: #c62f3bda;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bolder;
+}
+
+@media (max-width: 900px) {
+  .notifications-wrapper {
+    top: auto;
+    bottom: -15px;
+    right: 50%;
+    transform: translateX(50%) translateY(100%);
+  }
+  
+  .notification-badge {
+    transform: translateY(-10px) scale(0.9);
   }
 }

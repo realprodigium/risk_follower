@@ -8,7 +8,7 @@ def seed_users():
 
     try:
         if db.query(models.Users).first():
-            print("⚠️  Los usuarios ya existen. Saltando seed.")
+            print("Los usuarios ya existen. Saltando seed.")
             return
 
         users = [
