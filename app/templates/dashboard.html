@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cerveceria Seven Waves - Dashboard</title>
+    <title>Craft Brewery - Dashboard</title>
     <meta name="description" content="Sistema de monitoreo en tiempo real de CO2, temperatura y humedad para cervecería.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,7 +11,6 @@
     <link href="{{ url_for('static', path='css/main.css') }}" rel="stylesheet">
 </head>
 <body>
-
     <div id="alarm-banner" class="alarm-banner hidden">
         <div class="alarm-banner-inner">
             <div class="alarm-icon">
@@ -30,8 +29,8 @@
         <div class="topbar-inner">
             <div class="brand">
                 <div class="brand-text">
-                    <span class="brand-name">Cerveceria Seven Waves</span>
-                    <span class="brand-sub">Monitoreo y seguimiento en tiempo real</span>
+                    <span class="brand-name">Craft Brewery</span>
+                    <span class="brand-sub">Monitoreo y seguimiento</span>
                 </div>
                 <div class="connection-pill" id="ws-status">
                     <div class="conn-dot"></div>
@@ -48,9 +47,13 @@
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                     Historial
                 </a>
+                <a href="/admin" class="nav-item admin-only" id="nav-admin" style="display:none">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Admin
+                </a>
                 <button class="nav-item nav-btn" id="export-btn">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Exportar CSV
+                    Exportar
                 </button>
             </nav>
 
@@ -69,7 +72,6 @@
     </header>
 
     <main class="main-layout">
-
         <div class="status-bar">
             <div class="status-bar-left">
                 <div class="current-status-pill" id="current-status-pill">
@@ -104,16 +106,11 @@
                     <span class="metric-value" id="temp-value">--</span>
                     <span class="metric-value-unit">°C</span>
                 </div>
-                <div class="metric-sparkline">
-                    <canvas id="temp-sparkline" height="40"></canvas>
-                </div>
+                <div class="metric-sparkline"><canvas id="temp-sparkline" height="40"></canvas></div>
                 <div class="metric-bar-track">
                     <div class="metric-bar-fill" id="temp-bar" style="width:0%;background:var(--red)"></div>
                 </div>
-                <div class="metric-range">
-                    <span>0°C</span>
-                    <span>50°C</span>
-                </div>
+                <div class="metric-range"><span>0°C</span><span>50°C</span></div>
             </div>
 
             <div class="metric-card" id="card-humidity">
@@ -133,17 +130,13 @@
                     <span class="metric-value" id="humidity-value">--</span>
                     <span class="metric-value-unit">%</span>
                 </div>
-                <div class="metric-sparkline">
-                    <canvas id="humidity-sparkline" height="40"></canvas>
-                </div>
+                <div class="metric-sparkline"><canvas id="humidity-sparkline" height="40"></canvas></div>
                 <div class="metric-bar-track">
                     <div class="metric-bar-fill" id="humidity-bar" style="width:0%;background:var(--blue)"></div>
                 </div>
-                <div class="metric-range">
-                    <span>0%</span>
-                    <span>100%</span>
-                </div>
+                <div class="metric-range"><span>0%</span><span>100%</span></div>
             </div>
+
             <div class="metric-card" id="card-co2">
                 <div class="metric-card-top">
                     <div class="metric-icon metric-icon--co2">
@@ -161,16 +154,11 @@
                     <span class="metric-value" id="co2-value">--</span>
                     <span class="metric-value-unit">PPM</span>
                 </div>
-                <div class="metric-sparkline">
-                    <canvas id="co2-sparkline" height="40"></canvas>
-                </div>
+                <div class="metric-sparkline"><canvas id="co2-sparkline" height="40"></canvas></div>
                 <div class="metric-bar-track">
                     <div class="metric-bar-fill" id="co2-bar" style="width:0%;background:var(--green)"></div>
                 </div>
-                <div class="metric-range">
-                    <span>0</span>
-                    <span>1000 PPM</span>
-                </div>
+                <div class="metric-range"><span>0</span><span>1000 PPM</span></div>
             </div>
 
             <div class="metric-card metric-card--status" id="card-status">
@@ -186,18 +174,9 @@
                         <span id="big-status-text">Sin datos</span>
                     </div>
                     <div class="status-details">
-                        <div class="status-detail-row">
-                            <span>Dispositivo:</span>
-                            <span id="status-hardware">--</span>
-                        </div>
-                        <div class="status-detail-row">
-                            <span>Lecturas hoy:</span>
-                            <span id="status-count">0</span>
-                        </div>
-                        <div class="status-detail-row">
-                            <span>Alarmas hoy:</span>
-                            <span id="status-alarms">0</span>
-                        </div>
+                        <div class="status-detail-row"><span>Dispositivo:</span><span id="status-hardware">--</span></div>
+                        <div class="status-detail-row"><span>Lecturas hoy:</span><span id="status-count">0</span></div>
+                        <div class="status-detail-row"><span>Alarmas hoy:</span><span id="status-alarms">0</span></div>
                     </div>
                 </div>
             </div>
@@ -211,11 +190,11 @@
                 </div>
                 <div class="chart-controls">
                     <div class="timerange-group">
-                        <button class="trange-btn active" data-mins="1" id="trange-1m">1 min</button>
-                        <button class="trange-btn" data-mins="5" id="trange-5m">5 min</button>
+                        <button class="trange-btn active" data-mins="1"  id="trange-1m">1 min</button>
+                        <button class="trange-btn" data-mins="5"  id="trange-5m">5 min</button>
                         <button class="trange-btn" data-mins="15" id="trange-15m">15 min</button>
                         <button class="trange-btn" data-mins="60" id="trange-1h">1 hora</button>
-                        <button class="trange-btn" data-mins="0" id="trange-all">Todo</button>
+                        <button class="trange-btn" data-mins="0"  id="trange-all">Todo</button>
                     </div>
                 </div>
             </div>
@@ -231,12 +210,8 @@
                 <table class="data-table" id="recent-table">
                     <thead>
                         <tr>
-                            <th>Timestamp</th>
-                            <th>Fuente</th>
-                            <th>Temp (°C)</th>
-                            <th>Humedad (%)</th>
-                            <th>CO2 (PPM)</th>
-                            <th>Estado</th>
+                            <th>Timestamp</th><th>Fuente</th><th>Temp (°C)</th>
+                            <th>Humedad (%)</th><th>CO2 (PPM)</th><th>Estado</th>
                         </tr>
                     </thead>
                     <tbody id="recent-table-body">
@@ -255,7 +230,6 @@
 
     </main>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <script src="{{ url_for('static', path='js/auth.js') }}"></script>
     <script src="{{ url_for('static', path='js/dashboard.js') }}"></script>

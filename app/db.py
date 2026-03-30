@@ -28,6 +28,11 @@ def check_db_connection() -> bool:
     try:
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+            #print('bien')
         return True
-    except Exception:
+    except Exception as e:
+        #print('mal')
+        #print(e)
         return False
+    
+#print(check_db_connection())

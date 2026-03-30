@@ -3,16 +3,14 @@ import asyncio
 import logging
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from sqlalchemy.orm import Session
-from app.db import get_db
+from app.db import SessionLocal
 from app.database import models
 from datetime import datetime, timezone
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-
 class ConnectionManager:
-    
     def __init__(self):
         self.active_connections: list[WebSocket] = []
     
@@ -46,17 +44,19 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-
 @router.websocket("/ws/sensor-data")
 async def websocket_sensor_data(websocket: WebSocket):
     await manager.connect(websocket)
     
+    db = SessionLocal()
     try:
-        db = next(get_db())
         recent_records = db.query(models.Records).order_by(
             models.Records.timestamp.desc()
         ).limit(50).all()
+    finally:
+        db.close()
         
+    try:
         if recent_records:
             # Invertir para mantener cronologia
             recent_records.reverse()
@@ -93,7 +93,6 @@ async def websocket_sensor_data(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Error en WebSocket: {e}")
         manager.disconnect(websocket)
-
 
 async def send_sensor_data(record_data: dict):
     data = {
