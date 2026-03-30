@@ -1,30 +1,76 @@
 let chart = null;
 let websocket = null;
 let ws_reconnect_attempts = 0;
-const WS_MAX_RECONNECT = 5;
+const WS_MAX_RECONNECT   = 10;
 const WS_RECONNECT_DELAY = 3000;
 
-const MAX_POINTS = 200;
-let activeTimeMinutes = 1;
+const MAX_POINTS  = 500;
+
+let activeTimeMs  = 10_000;
 let activeHardware = 'all';
 
 const history = {
-    timestamps: [],
+    timestamps:  [],
     temperature: [],
-    humidity: [],
-    co2: [],
-    hardware: [],
-    risk: []
+    humidity:    [],
+    co2:         [],
+    hardware:    [],
+    risk:        []
 };
 
 const sparkHistory = { temp: [], humidity: [], co2: [] };
 const SPARK_MAX = 20;
 
 let readingsToday = 0;
-let alarmsToday = 0;
+let alarmsToday   = 0;
 let knownHardware = new Set();
 let lastDataPoint = null;
-let sparkCtx = {};
+let sparkCtx      = {};
+
+let _chartRafPending = false;
+
+function scheduleChartRefresh() {
+    if (_chartRafPending) return;
+    _chartRafPending = true;
+    requestAnimationFrame(() => {
+        _chartRafPending = false;
+        _doChartRender();
+    });
+}
+
+function _doChartRender() {
+    if (!chart) return;
+
+    const indices = activeHardware === 'all'
+        ? history.timestamps.map((_, i) => i)
+        : history.timestamps.map((_, i) => i).filter(i => history.hardware[i] === activeHardware);
+
+    const tempData = indices.map(i => [history.timestamps[i], history.temperature[i]]);
+    const humData  = indices.map(i => [history.timestamps[i], history.humidity[i]]);
+    const co2Data  = indices.map(i => [history.timestamps[i], history.co2[i]]);
+
+    let xMin, xMax;
+    if (activeTimeMs > 0 && tempData.length) {
+        const latestTs = history.timestamps[history.timestamps.length - 1];
+        xMin = latestTs - activeTimeMs;
+        xMax = latestTs + activeTimeMs * 0.05;
+    } else {
+        xMin = 'dataMin';
+        xMax = 'dataMax';
+    }
+
+    chart.setOption({
+        xAxis: [{ min: xMin, max: xMax }],
+        series: [
+            { name: 'Temperatura', data: tempData },
+            { name: 'Humedad',     data: humData  },
+            { name: 'CO2',         data: co2Data  }
+        ]
+    });
+
+    const countEl = document.getElementById('chart-point-count');
+    if (countEl) countEl.textContent = `${indices.length} puntos`;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     initChart();
@@ -33,9 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAlarmDismiss();
     setupExport();
 
-    sparkCtx.temp = document.getElementById('temp-sparkline').getContext('2d');
+    sparkCtx.temp     = document.getElementById('temp-sparkline').getContext('2d');
     sparkCtx.humidity = document.getElementById('humidity-sparkline').getContext('2d');
-    sparkCtx.co2 = document.getElementById('co2-sparkline').getContext('2d');
+    sparkCtx.co2      = document.getElementById('co2-sparkline').getContext('2d');
 });
 
 function initChart() {
@@ -64,7 +110,7 @@ function buildBaseChartOption() {
                 let html   = `<div style="margin-bottom:6px;color:#8892a4;font-size:11px">${time}</div>`;
                 params.forEach(p => {
                     const val  = p.value !== undefined
-                        ? p.value.toFixed(p.seriesName.includes('CO2') ? 0 : 1)
+                        ? p.value[1].toFixed(p.seriesName.includes('CO2') ? 0 : 1)
                         : '--';
                     const unit = p.seriesName.includes('Temp') ? '°C'
                         : p.seriesName.includes('Hum') ? '%' : ' PPM';
@@ -83,9 +129,19 @@ function buildBaseChartOption() {
             itemWidth: 14, itemHeight: 4,
             data: ['Temperatura', 'Humedad', 'CO2']
         },
+        dataZoom: [
+            {
+                type: 'inside',
+                filterMode: 'none',
+                zoomOnMouseWheel: true,
+                moveOnMouseMove: true
+            }
+        ],
         xAxis: {
             type: 'time',
             boundaryGap: false,
+            min: 'dataMin',
+            max: 'dataMax',
             splitLine:  { show: true, lineStyle: { color: '#252a38', type: 'dashed' } },
             axisLine:   { lineStyle: { color: '#252a38' } },
             axisTick:   { lineStyle: { color: '#252a38' } },
@@ -149,53 +205,22 @@ function buildBaseChartOption() {
     };
 }
 
-function refreshChart() {
-    if (!chart) return;
-
-    let indices;
-    if (activeTimeMinutes === 0) {
-        indices = history.timestamps
-            .map((_, i) => i)
-            .filter(i => activeHardware === 'all' || history.hardware[i] === activeHardware);
-    } else {
-        const latestTs = history.timestamps.length
-            ? Math.max(...history.timestamps)
-            : Date.now();
-        const cutoff = latestTs - activeTimeMinutes * 60 * 1000;
-        indices = history.timestamps
-            .map((_, i) => i)
-            .filter(i => history.timestamps[i] >= cutoff &&
-                (activeHardware === 'all' || history.hardware[i] === activeHardware));
-    }
-    const times = indices.map(i => history.timestamps[i]);
-    const temps = indices.map(i => history.temperature[i]);
-    const humids = indices.map(i => history.humidity[i]);
-    const co2s = indices.map(i => history.co2[i]);
-
-    chart.setOption({
-        series: [
-            { name: 'Temperatura', data: times.map((t, i) => [t, temps[i]])},
-            { name: 'Humedad', data: times.map((t, i) => [t, humids[i]])},
-            { name: 'CO2', data: times.map((t, i) => [t, co2s[i]])}
-        ]
-    });
-    const countEl = document.getElementById('chart-point-count');
-    if (countEl) countEl.textContent = `${indices.length} puntos`;
-}
-
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const url = `${protocol}//${window.location.host}/ws/sensor-data`;
     websocket = new WebSocket(url);
 
-    websocket.onopen = () => { ws_reconnect_attempts = 0; setConnectionStatus('connected'); };
+    websocket.onopen = () => {
+        ws_reconnect_attempts = 0;
+        setConnectionStatus('connected');
+    };
     websocket.onerror = () => setConnectionStatus('disconnected');
     websocket.onclose = () => {
         setConnectionStatus('disconnected');
-        if (ws_reconnect_attempts < WS_MAX_RECONNECT) {
-            ws_reconnect_attempts++;
-            setTimeout(connectWebSocket, WS_RECONNECT_DELAY);
-        }
+        // Exponential backoff, infinite retries.
+        const delay = Math.min(WS_RECONNECT_DELAY * 2 ** ws_reconnect_attempts, 30_000);
+        ws_reconnect_attempts++;
+        setTimeout(connectWebSocket, delay);
     };
     websocket.onmessage = (e) => {
         try {
@@ -218,12 +243,12 @@ function normalizePoint(raw) {
         ts = new Date(tsStr + 'Z').getTime();
     }
     return {
-        timestamp: ts,
-        hardware: raw.hardware || 'Unknown',
+        timestamp:   ts,
+        hardware:    raw.hardware || 'Unknown',
         temperature: parseFloat(raw.temperature),
-        humidity: parseFloat(raw.humidity),
-        co2: parseFloat(raw.co2),
-        risk: raw.risk || 'normal'
+        humidity:    parseFloat(raw.humidity),
+        co2:         parseFloat(raw.co2),
+        risk:        raw.risk || 'normal'
     };
 }
 
@@ -266,7 +291,7 @@ function ingestPoint(point, isRealtime) {
 
     updateCards(point);
     updateAlertBanner(point);
-    refreshChart();
+    scheduleChartRefresh();
     updateRecentTable(point, isRealtime);
     lastDataPoint = point;
 }
@@ -288,7 +313,7 @@ function updateCards(point) {
     drawSparkline(sparkCtx.co2, sparkHistory.co2, '#1dd38a');
 
     const bigBadge = document.getElementById('big-status-badge');
-    const bigText = document.getElementById('big-status-text');
+    const bigText  = document.getElementById('big-status-text');
     bigBadge.className = `big-status-badge status-${point.risk}`;
     bigText.textContent = riskLabel(point.risk);
 
@@ -329,8 +354,8 @@ function drawSparkline(ctx, data, color) {
     canvas.width = w; canvas.height = h;
     ctx.clearRect(0, 0, w, h);
 
-    const min = Math.min(...data) * 0.98;
-    const max = Math.max(...data) * 1.02 || min + 1;
+    const min  = Math.min(...data) * 0.98;
+    const max  = Math.max(...data) * 1.02 || min + 1;
     const scaleY = v => h - ((v - min) / (max - min)) * h;
     const scaleX = i => (i / (data.length - 1)) * w;
 
@@ -370,7 +395,7 @@ function setupAlarmDismiss() {
 }
 
 const recentRecords = [];
-const RECENT_MAX = 10;
+const RECENT_MAX    = 10;
 
 function updateRecentTable(point, isRealtime) {
     recentRecords.unshift(point);
@@ -401,7 +426,7 @@ function setActiveHardware(hw) {
     activeHardware = hw;
     document.querySelectorAll('.sensor-tab').forEach(btn =>
         btn.classList.toggle('active', btn.dataset.hardware === hw));
-    refreshChart();
+    scheduleChartRefresh();
 }
 
 function setupControls() {
@@ -411,8 +436,8 @@ function setupControls() {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.trange-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            activeTimeMinutes = parseInt(btn.dataset.mins, 10);
-            refreshChart();
+            activeTimeMs = parseInt(btn.dataset.ms, 10);
+            _doChartRender();
         });
     });
 }
@@ -427,10 +452,10 @@ function exportCSV() {
         csv += `"${new Date(ts).toISOString()}",${history.hardware[i]},${history.temperature[i]},${history.humidity[i]},${history.co2[i]},${history.risk[i]}\n`;
     });
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
     a.href = url;
-    a.download = `co2_monitor_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.csv`;
+    a.download = `co2_monitor_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
 }
@@ -446,8 +471,9 @@ function setConnectionStatus(state) {
 function riskLabel(risk) {
     return { normal: 'Normal', alto: 'Alto', bajo: 'Bajo', high: 'Alto', low: 'Bajo' }[risk] || risk;
 }
+
 function formatTs(ms) {
-    const d = new Date(ms);
+    const d   = new Date(ms);
     const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }

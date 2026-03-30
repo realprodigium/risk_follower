@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy import and_
+from typing import List, Optional
+from datetime import datetime
 from app.database import models, schemas
 from app.db import get_db
 from app.services import auth_services
@@ -16,17 +18,41 @@ def _audit(db: Session, username: str, action: str, detail: str = None):
 @router.get('/records', response_model=List[schemas.Record], tags=['records'])
 def read_records(
     db: Session = Depends(get_db),
-    current_user: models.Users = Depends(auth_services.get_current_user)
+    current_user: models.Users = Depends(auth_services.get_current_user),
+    limit:  int = Query(default=1000, ge=1, le=5000, description="Max records to return"),
+    offset: int = Query(default=0,    ge=0,           description="Records to skip"),
+    hardware:  Optional[str]      = Query(default=None, description="Filter by hardware ID"),
+    risk:      Optional[str]      = Query(default=None, description="Filter by risk: alto | normal | bajo"),
+    date_from: Optional[datetime] = Query(default=None, description="ISO datetime lower bound (inclusive)"),
+    date_to:   Optional[datetime] = Query(default=None, description="ISO datetime upper bound (inclusive)"),
 ):
-    records = db.query(models.Records).all()
+    q = db.query(models.Records)
+
+    filters = []
+    if hardware:
+        filters.append(models.Records.hardware == hardware)
+    if risk:
+        filters.append(models.Records.risk == risk)
+    if date_from:
+        filters.append(models.Records.timestamp >= date_from)
+    if date_to:
+        filters.append(models.Records.timestamp <= date_to)
+
+    if filters:
+        q = q.filter(and_(*filters))
+
+    q = q.order_by(models.Records.timestamp.desc())
+
+    records = q.offset(offset).limit(limit).all()
+
     if not records:
         raise HTTPException(status_code=404, detail="No records found")
     return records
 
 @router.post('/records', response_model=schemas.Record, tags=['records'])
 def create_record(
-    record:schemas.RecordCreate,
-    db:Session=Depends(get_db),
+    record: schemas.RecordCreate,
+    db: Session = Depends(get_db),
     current_user: models.Users = Depends(auth_services.require_role(['admin', 'operator']))
 ):
     if db.query(models.Records).filter(models.Records.timestamp == record.timestamp).first():
@@ -42,8 +68,8 @@ def create_record(
 
 @router.delete('/records/{record_id}', tags=['records'])
 def delete_record(
-    record_id:int,
-    db:Session = Depends(get_db),
+    record_id: int,
+    db: Session = Depends(get_db),
     current_user: models.Users = Depends(auth_services.require_role(['admin']))
 ):
     record = db.query(models.Records).filter(models.Records.id == record_id).first()

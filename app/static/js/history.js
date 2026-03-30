@@ -1,37 +1,63 @@
-/* ============================================================
-   CO2 Monitor — History Page JS
-   ============================================================ */
-
-let allRecords    = [];
+let allRecords      = [];
 let filteredRecords = [];
-let sortCol       = 'timestamp';
-let sortDir       = 'desc';
-const PAGE_SIZE   = 25;
-let currentPage   = 1;
+let sortCol         = 'timestamp';
+let sortDir         = 'desc';
+const PAGE_SIZE     = 25;
+let currentPage     = 1;
+let totalFromServer = 0;
 
 document.addEventListener('DOMContentLoaded', () => {
     loadHistory();
     setupControls();
 });
 
-// ---- Load data from API ----
-async function loadHistory() {
+function buildQueryParams(forExport = false) {
+    const params = new URLSearchParams();
+
+    const hardware  = document.getElementById('device-filter').value;
+    const risk      = document.getElementById('status-filter').value;
+    const dateFrom  = document.getElementById('date-from').value;
+    const dateTo    = document.getElementById('date-to').value;
+
+    if (hardware)  params.set('hardware',  hardware);
+    if (risk)      params.set('risk',      risk);
+    if (dateFrom)  params.set('date_from', new Date(dateFrom).toISOString());
+    if (dateTo)    params.set('date_to',   new Date(dateTo).toISOString());
+
+    if (!forExport) {
+        params.set('limit',  PAGE_SIZE);
+        params.set('offset', (currentPage - 1) * PAGE_SIZE);
+    } else {
+        params.set('limit',  5000);
+        params.set('offset', 0);
+    }
+
+    return params.toString();
+}
+
+async function loadHistory(resetPage = true) {
+    if (resetPage) currentPage = 1;
+
+    setTableLoading(true);
+
     try {
         const token = localStorage.getItem('access_token');
-        const resp  = await fetch('/records', {
+        const qs    = buildQueryParams();
+        const resp  = await fetch(`/records?${qs}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        if (resp.status === 401) {
-            window.location.href = '/login';
-            return;
-        }
+        if (resp.status === 401) { window.location.href = '/login'; return; }
+
         if (resp.status === 404) {
-            // No records yet
-            allRecords = [];
-            renderAll();
+            allRecords      = [];
+            filteredRecords = [];
+            renderTable();
+            renderPagination(0);
+            updateStats([]);
             return;
         }
+
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
         const data = await resp.json();
@@ -45,46 +71,29 @@ async function loadHistory() {
             risk:        r.risk
         }));
 
-        populateDeviceFilter();
-        renderAll();
+        populateDeviceFilter(allRecords);
+        applyClientSort();
+        updateStats(allRecords);
 
     } catch (err) {
         console.error('Error loading history:', err);
         showTableError('Error al cargar los datos. Intenta recargar.');
+    } finally {
+        setTableLoading(false);
     }
 }
 
-function renderAll() {
-    applyFilters();
-    updateStats();
-}
+function applyClientSort() {
+    filteredRecords = [...allRecords];
 
-// ---- Filters ----
-function applyFilters() {
-    const search     = document.getElementById('search-input').value.toLowerCase();
-    const statusFilter = document.getElementById('status-filter').value;
-    const deviceFilter = document.getElementById('device-filter').value;
-    const dateFrom   = document.getElementById('date-from').value;
-    const dateTo     = document.getElementById('date-to').value;
+    const search = document.getElementById('search-input').value.toLowerCase();
+    if (search) {
+        filteredRecords = filteredRecords.filter(r =>
+            r.hardware.toLowerCase().includes(search) ||
+            r.risk.toLowerCase().includes(search)
+        );
+    }
 
-    filteredRecords = allRecords.filter(r => {
-        if (search && !r.hardware.toLowerCase().includes(search) && !r.risk.toLowerCase().includes(search)) return false;
-        if (statusFilter && r.risk !== statusFilter) return false;
-        if (deviceFilter && r.hardware !== deviceFilter) return false;
-        if (dateFrom) {
-            const from = new Date(dateFrom).getTime();
-            const rts  = new Date(r.timestamp).getTime();
-            if (rts < from) return false;
-        }
-        if (dateTo) {
-            const to  = new Date(dateTo).getTime();
-            const rts = new Date(r.timestamp).getTime();
-            if (rts > to) return false;
-        }
-        return true;
-    });
-
-    // Sort
     filteredRecords.sort((a, b) => {
         let va = a[sortCol];
         let vb = b[sortCol];
@@ -98,20 +107,17 @@ function applyFilters() {
         return sortDir === 'asc' ? cmp : -cmp;
     });
 
-    currentPage = 1;
     renderTable();
-    renderPagination();
+    renderPagination(filteredRecords.length);
 }
 
 function renderTable() {
     const tbody = document.getElementById('history-table-body');
-    const start = (currentPage - 1) * PAGE_SIZE;
-    const page  = filteredRecords.slice(start, start + PAGE_SIZE);
 
     const label = document.getElementById('records-count-label');
-    label.textContent = `Mostrando ${start + 1}–${Math.min(start + PAGE_SIZE, filteredRecords.length)} de ${filteredRecords.length} registros`;
 
-    if (page.length === 0) {
+    if (!filteredRecords.length) {
+        label.textContent = '0 registros';
         tbody.innerHTML = `<tr><td colspan="7">
             <div class="loading-state">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -121,7 +127,9 @@ function renderTable() {
         return;
     }
 
-    tbody.innerHTML = page.map(r => {
+    label.textContent = `${filteredRecords.length} registros (página ${currentPage})`;
+
+    tbody.innerHTML = filteredRecords.map(r => {
         const ts = formatTimestamp(r.timestamp);
         return `<tr>
             <td class="ts-cell" style="color:var(--text-muted)">${r.id}</td>
@@ -135,38 +143,37 @@ function renderTable() {
     }).join('');
 }
 
-function renderPagination() {
-    const total = Math.max(1, Math.ceil(filteredRecords.length / PAGE_SIZE));
+function renderPagination(total) {
     document.getElementById('current-page').textContent = currentPage;
-    document.getElementById('total-pages').textContent  = total;
+    document.getElementById('total-pages').textContent  = '?';
     document.getElementById('prev-page').disabled = currentPage <= 1;
-    document.getElementById('next-page').disabled = currentPage >= total;
+    document.getElementById('next-page').disabled = allRecords.length < PAGE_SIZE;
 }
 
-function updateStats() {
-    document.getElementById('total-records').textContent = allRecords.length;
-
-    const alarms  = allRecords.filter(r => r.risk !== 'normal').length;
-    document.getElementById('alarm-records').textContent = alarms;
-
-    const devices = new Set(allRecords.map(r => r.hardware)).size;
-    document.getElementById('devices-count').textContent = devices;
+function updateStats(records) {
+    const alarms  = records.filter(r => r.risk !== 'normal').length;
+    const devices = new Set(records.map(r => r.hardware)).size;
+    document.getElementById('total-records').textContent = records.length;
+    document.getElementById('alarm-records').textContent  = alarms;
+    document.getElementById('devices-count').textContent  = devices;
 }
 
-function populateDeviceFilter() {
-    const devices = [...new Set(allRecords.map(r => r.hardware))].sort();
-    const sel = document.getElementById('device-filter');
+function populateDeviceFilter(records) {
+    const sel     = document.getElementById('device-filter');
+    const current = sel.value;
+    const known   = new Set([...sel.options].map(o => o.value));
+    const devices = [...new Set(records.map(r => r.hardware))].sort();
     devices.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        sel.appendChild(opt);
+        if (!known.has(d)) {
+            const opt = document.createElement('option');
+            opt.value = d; opt.textContent = d;
+            sel.appendChild(opt);
+        }
     });
+    if (current) sel.value = current;
 }
 
-// ---- Sorting ----
 function setupControls() {
-    // Sort headers
     document.querySelectorAll('.sortable').forEach(th => {
         th.addEventListener('click', () => {
             const col = th.dataset.col;
@@ -176,55 +183,47 @@ function setupControls() {
                 sortCol = col;
                 sortDir = col === 'timestamp' ? 'desc' : 'asc';
             }
-
-            document.querySelectorAll('.sortable').forEach(h => {
-                h.classList.remove('sort-asc', 'sort-desc');
-            });
+            document.querySelectorAll('.sortable').forEach(h =>
+                h.classList.remove('sort-asc', 'sort-desc')
+            );
             th.classList.add(sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
-            applyFilters();
+            applyClientSort();
         });
     });
 
-    // Initial sort indicator
     const defaultTh = document.querySelector('[data-col="timestamp"]');
     if (defaultTh) defaultTh.classList.add('sort-desc');
 
-    // Filter buttons
-    document.getElementById('apply-filters').addEventListener('click', applyFilters);
+    document.getElementById('apply-filters').addEventListener('click', () => loadHistory(true));
+
     document.getElementById('clear-filters').addEventListener('click', () => {
-        document.getElementById('search-input').value = '';
+        document.getElementById('search-input').value  = '';
         document.getElementById('status-filter').value = '';
         document.getElementById('device-filter').value = '';
-        document.getElementById('date-from').value = '';
-        document.getElementById('date-to').value = '';
-        applyFilters();
+        document.getElementById('date-from').value     = '';
+        document.getElementById('date-to').value       = '';
+        loadHistory(true);
     });
 
-    // Search on type
-    document.getElementById('search-input').addEventListener('input', debounce(applyFilters, 300));
+    document.getElementById('search-input').addEventListener('input', debounce(applyClientSort, 300));
 
-    // Pagination
     document.getElementById('prev-page').addEventListener('click', () => {
-        if (currentPage > 1) { currentPage--; renderTable(); renderPagination(); }
+        if (currentPage > 1) { currentPage--; loadHistory(false); }
     });
     document.getElementById('next-page').addEventListener('click', () => {
-        const total = Math.ceil(filteredRecords.length / PAGE_SIZE);
-        if (currentPage < total) { currentPage++; renderTable(); renderPagination(); }
+        if (allRecords.length >= PAGE_SIZE) { currentPage++; loadHistory(false); }
     });
 
-    // Refresh
     document.getElementById('refresh-btn').addEventListener('click', () => {
         const btn = document.getElementById('refresh-btn');
         btn.classList.add('spinning');
-        loadHistory().finally(() => {
-            setTimeout(() => btn.classList.remove('spinning'), 600);
-        });
+        loadHistory(true).finally(() =>
+            setTimeout(() => btn.classList.remove('spinning'), 600)
+        );
     });
 
-    // Export CSV
     document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
 
-    // Logout
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', () => {
@@ -233,7 +232,6 @@ function setupControls() {
         });
     }
 
-    // User display (from token)
     loadUserInfo();
 }
 
@@ -244,54 +242,67 @@ function loadUserInfo() {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const name = payload.sub || 'Usuario';
         document.getElementById('user-display').textContent = name;
-        document.getElementById('user-avatar').textContent = name[0].toUpperCase();
-        const role = payload.role || '';
-        document.getElementById('user-role').textContent = role;
-    } catch(e) {}
+        document.getElementById('user-avatar').textContent  = name[0].toUpperCase();
+        document.getElementById('user-role').textContent    = payload.role || '';
+    } catch (e) {}
 }
 
-// ---- Export ----
-function exportCSV() {
-    const data = filteredRecords.length > 0 ? filteredRecords : allRecords;
-    let csv = 'ID,Timestamp,Hardware,Temperatura_C,Humedad_pct,CO2_PPM,Estado\n';
-    data.forEach(r => {
-        csv += `${r.id},"${r.timestamp}",${r.hardware},${r.temperature},${r.humidity},${r.co2},${r.risk}\n`;
-    });
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href     = url;
-    a.download = `co2_historial_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+async function exportCSV() {
+    try {
+        const token = localStorage.getItem('access_token');
+        const qs    = buildQueryParams(true);
+        const resp  = await fetch(`/records?${qs}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+
+        const data = await resp.json();
+        let csv = 'ID,Timestamp,Hardware,Temperatura_C,Humedad_pct,CO2_PPM,Estado\n';
+        data.forEach(r => {
+            csv += `${r.id},"${r.timestamp}",${r.hardware},${r.temperature},${r.humidity},${r.co2},${r.risk}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `co2_historial_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error('Export error:', err);
+    }
 }
 
-// ---- Error state ----
+function setTableLoading(loading) {
+    if (loading) {
+        document.getElementById('history-table-body').innerHTML = `
+            <tr><td colspan="7">
+                <div class="loading-state"><div class="spinner"></div><span>Cargando registros...</span></div>
+            </td></tr>`;
+    }
+}
+
 function showTableError(msg) {
     document.getElementById('history-table-body').innerHTML = `
         <tr><td colspan="7">
             <div class="loading-state" style="color:var(--red)">${msg}</div>
         </td></tr>`;
 }
-
-// ---- Helpers ----
 function riskLabel(risk) {
     const map = { normal: 'Normal', alto: 'Alto', bajo: 'Bajo', high: 'Alto', low: 'Bajo' };
     return map[risk] || risk;
 }
 
 function formatTimestamp(ts) {
-    const d = new Date(ts);
+    const d   = new Date(ts);
     const pad = n => String(n).padStart(2, '0');
-    return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 function debounce(fn, delay) {
     let timer;
-    return (...args) => {
-        clearTimeout(timer);
-        timer = setTimeout(() => fn(...args), delay);
-    };
+    return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), delay); };
 }
