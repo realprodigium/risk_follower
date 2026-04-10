@@ -2,102 +2,103 @@ import json
 import asyncio
 import logging
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
-from sqlalchemy.orm import Session
 from app.db import SessionLocal
 from app.database import models
-from datetime import datetime, timezone
+from datetime import timezone
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: list[WebSocket] = []
-    
-    async def connect(self, websocket: WebSocket):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-        logger.info(f"Cliente conectado. Conexiones activas: {len(self.active_connections)}")
-    
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
-        logger.info(f"Cliente desconectado. Conexiones activas: {len(self.active_connections)}")
-    
-    async def broadcast(self, data: dict):
-        if not self.active_connections:
-            return
-        
-        message = json.dumps(data)
-        disconnected = []
-        
-        for connection in self.active_connections:
-            try:
-                await connection.send_text(message)
-            except Exception as e:
-                logger.error(f"Error al enviar mensaje: {e}")
-                disconnected.append(connection)
-        
-        for conn in disconnected:
-            if conn in self.active_connections:
-                self.active_connections.remove(conn)
+POLL_INTERVAL = 1.0
 
 
-manager = ConnectionManager()
+def _serialize(record, msg_type: str) -> str:
+    """Serializa un record a JSON con formato consistente"""
+    ts = record.timestamp
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=timezone.utc)
+    
+    return json.dumps({
+        "type": msg_type,
+        "id": record.id,
+        "timestamp": ts.isoformat(),
+        "hardware": record.hardware,
+        "temperature": record.temperature,
+        "humidity": record.humidity,
+        "co2": record.co2,
+        "risk": record.risk,
+    })
+
 
 @router.websocket("/ws/sensor-data")
 async def websocket_sensor_data(websocket: WebSocket):
-    await manager.connect(websocket)
+    """
+    WebSocket para streaming en tiempo real de datos cargados en BD.
+    Polling seguro a la BD, sin broadcast directo MQTT.
+    """
+    await websocket.accept()
+    logger.info("WebSocket client connected")
+
+    last_id = 0
     
-    db = SessionLocal()
     try:
-        recent_records = db.query(models.Records).order_by(
-            models.Records.timestamp.desc()
-        ).limit(50).all()
-    finally:
-        db.close()
-        
-    try:
-        if recent_records:
-            # Invertir para mantener cronologia
-            recent_records.reverse()
-            for record in recent_records:
-                # Asegurar que el timestamp tenga timezone UTC para ser consistente
-                # con los datos en tiempo real (que usan datetime.now(timezone.utc))
-                ts = record.timestamp
-                if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
-                data = {
-                    "type": "historical",
-                    "id": record.id,
-                    "timestamp": ts.isoformat(),
-                    "hardware": record.hardware,
-                    "temperature": record.temperature,
-                    "humidity": record.humidity,
-                    "co2": record.co2,
-                    "risk": record.risk
-                }
-                await websocket.send_text(json.dumps(data))
-        
+        # ── 1. Envía datos históricos (últimos 50 registros) ──────────────────
+        db = SessionLocal()
+        try:
+            seed = (
+                db.query(models.Records)
+                .order_by(models.Records.id.desc())
+                .limit(50)
+                .all()
+            )
+            seed.reverse()
+            for rec in seed:
+                await websocket.send_text(_serialize(rec, "historical"))
+                if last_id == 0:
+                    last_id = rec.id
+        except Exception as exc:
+            logger.error(f"Error sending historical data: {exc}")
+            await websocket.send_text(json.dumps({
+                "type": "error",
+                "message": f"Error loading historical data: {str(exc)}"
+            }))
+        finally:
+            db.close()
+
+        # ── 2. Polling iterativo por nuevos registros ──────────────────────────
         while True:
             try:
-                data = await asyncio.wait_for(websocket.receive_text(), timeout=5.0)
-                logger.debug(f"Mensaje recibido del cliente: {data}")
-            
+                # Non-blocking receive con timeout para polling regular
+                await asyncio.wait_for(websocket.receive_text(), timeout=POLL_INTERVAL)
             except asyncio.TimeoutError:
                 pass
             except WebSocketDisconnect:
-                manager.disconnect(websocket)
-                logger.info("Cliente desconectado")
+                logger.info("WebSocket client disconnected")
                 break
-    
-    except Exception as e:
-        logger.error(f"Error en WebSocket: {e}")
-        manager.disconnect(websocket)
 
-async def send_sensor_data(record_data: dict):
-    data = {
-        "type": "realtime",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        **record_data
-    }
-    await manager.broadcast(data)
+            # Poll BD por nuevos registros
+            db = SessionLocal()
+            try:
+                new_records = (
+                    db.query(models.Records)
+                    .filter(models.Records.id > last_id)
+                    .order_by(models.Records.id.asc())
+                    .all()
+                )
+                for rec in new_records:
+                    await websocket.send_text(_serialize(rec, "realtime"))
+                    last_id = rec.id
+                    
+            except Exception as exc:
+                logger.error(f"Database poll error: {exc}")
+                await websocket.send_text(json.dumps({
+                    "type": "error",
+                    "message": f"Database poll error: {str(exc)}"
+                }))
+            finally:
+                db.close()
+
+    except Exception as exc:
+        logger.error(f"WebSocket error: {exc}")
+    finally:
+        logger.info("WebSocket connection closed")

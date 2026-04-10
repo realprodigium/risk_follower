@@ -1,7 +1,9 @@
 version: '3.8'
 
 services:
-  # fastapi back
+  # ─────────────────────────────────────────────────────────────────────────────
+  # FastAPI Backend Server
+  # ─────────────────────────────────────────────────────────────────────────────
   web:
     build: .
     container_name: co2_backend
@@ -11,24 +13,73 @@ services:
     env_file:
       - .env
     depends_on:
+      - postgres
       - emqx
     networks:
       - co2_network
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # broker emqx
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PostgreSQL Database
+  # ─────────────────────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: co2_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: co2_monitor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - co2_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # MQTT Broker - EMQX (for local development only)
+  # 
+  # NOTA IMPORTANTE:
+  # - Este servicio es SOLO para desarrollo local
+  # - En PRODUCCIÓN: Usar HiveMQ Cloud (broker: your-cluster.s1.eu.hivemq.cloud)
+  # - Ver DEPLOYMENT.md para configuración en producción
+  # ─────────────────────────────────────────────────────────────────────────────
   emqx:
     image: emqx:5.8
     container_name: co2_emqx
     restart: unless-stopped
+    environment:
+      EMQX_LISTENERS__TCP__DEFAULT__ACCEPTORS: 16384
     ports:
-      - "1883:1883"   
-      - "8083:8083"   
-      - "18083:18083" #dashboard
+      - "1883:1883"     # MQTT
+      - "8083:8083"     # WebSocket
+      - "18083:18083"   # Dashboard (admin/public)
     volumes:
       - ./emqx/data:/opt/emqx/data
     networks:
       - co2_network
+    healthcheck:
+      test: ["CMD", "emqx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 networks:
   co2_network:
     driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+
