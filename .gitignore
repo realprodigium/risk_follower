@@ -9,3 +9,4 @@ datasets/
 .env.example
 test_mqtt_sensor.py
 seed_users.py
+ACTION_ITEMS.md

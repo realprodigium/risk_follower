@@ -9,11 +9,9 @@ from datetime import timezone
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-POLL_INTERVAL = 1.0
-
+POLL_INTERVAL = 0.5
 
 def _serialize(record, msg_type: str) -> str:
-    """Serializa un record a JSON con formato consistente"""
     ts = record.timestamp
     if ts.tzinfo is None:
         ts = ts.replace(tzinfo=timezone.utc)
@@ -32,23 +30,18 @@ def _serialize(record, msg_type: str) -> str:
 
 @router.websocket("/ws/sensor-data")
 async def websocket_sensor_data(websocket: WebSocket):
-    """
-    WebSocket para streaming en tiempo real de datos cargados en BD.
-    Polling seguro a la BD, sin broadcast directo MQTT.
-    """
     await websocket.accept()
     logger.info("WebSocket client connected")
 
     last_id = 0
     
     try:
-        # ── 1. Envía datos históricos (últimos 50 registros) ──────────────────
         db = SessionLocal()
         try:
             seed = (
                 db.query(models.Records)
                 .order_by(models.Records.id.desc())
-                .limit(50)
+                .limit(10)
                 .all()
             )
             seed.reverse()
@@ -65,10 +58,8 @@ async def websocket_sensor_data(websocket: WebSocket):
         finally:
             db.close()
 
-        # ── 2. Polling iterativo por nuevos registros ──────────────────────────
         while True:
             try:
-                # Non-blocking receive con timeout para polling regular
                 await asyncio.wait_for(websocket.receive_text(), timeout=POLL_INTERVAL)
             except asyncio.TimeoutError:
                 pass
@@ -76,7 +67,6 @@ async def websocket_sensor_data(websocket: WebSocket):
                 logger.info("WebSocket client disconnected")
                 break
 
-            # Poll BD por nuevos registros
             db = SessionLocal()
             try:
                 new_records = (

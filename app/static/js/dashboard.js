@@ -4,9 +4,9 @@ let ws_reconnect_attempts = 0;
 const WS_MAX_RECONNECT   = 10;
 const WS_RECONNECT_DELAY = 3000;
 
-const MAX_POINTS  = 500;
+const MAX_POINTS  = 10;
 
-let activeTimeMs  = 10_000;
+let activeTimeMs  = 60_000;
 let activeHardware = 'all';
 
 const history = {
@@ -92,61 +92,61 @@ function initChart() {
 }
 
 function buildBaseChartOption() {
+    // Detect light mode
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const grid      = isLight ? 'rgba(0,0,0,0.05)' : 'rgba(255,255,255,0.04)';
+    const axisLine  = isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.06)';
+    const axisLabel = isLight ? '#9E9C96'           : '#3C3A36';
+    const tooltipBg = isLight ? '#FAFAF8'           : '#131313';
+    const tooltipBd = isLight ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.07)';
+    const tooltipTx = isLight ? '#111110'           : '#EDEBE6';
+    const legendTx  = isLight ? '#9E9C96'           : '#3C3A36';
+ 
     return {
         backgroundColor: 'transparent',
         animation: false,
-        grid: { left: '60px', right: '100px', top: '20px', bottom: '50px', containLabel: false },
+        grid: { left: '56px', right: '96px', top: '16px', bottom: '48px', containLabel: false },
         tooltip: {
             trigger: 'axis',
-            backgroundColor: '#181c27',
-            borderColor: '#252a38',
+            backgroundColor: tooltipBg,
+            borderColor: tooltipBd,
             borderWidth: 1,
-            textStyle: { color: '#e8ecf4', fontFamily: 'JetBrains Mono, monospace', fontSize: 12 },
-            axisPointer: { type: 'cross', lineStyle: { color: '#4a9eff', opacity: 0.4 } },
+            textStyle: { color: tooltipTx, fontFamily: 'JetBrains Mono, monospace', fontSize: 11 },
+            axisPointer: { type: 'line', lineStyle: { color: isLight ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.08)', width: 1 } },
             formatter: (params) => {
                 if (!params.length) return '';
                 const ts   = new Date(params[0].axisValue);
                 const time = ts.toLocaleTimeString('es-CO', { hour12: false });
-                let html   = `<div style="margin-bottom:6px;color:#8892a4;font-size:11px">${time}</div>`;
+                let html   = `<div style="margin-bottom:5px;color:${legendTx};font-size:10px;letter-spacing:0.04em">${time}</div>`;
                 params.forEach(p => {
                     const val  = p.value !== undefined
                         ? p.value[1].toFixed(p.seriesName.includes('CO2') ? 0 : 1)
                         : '--';
                     const unit = p.seriesName.includes('Temp') ? '°C'
                         : p.seriesName.includes('Hum') ? '%' : ' PPM';
-                    html += `<div style="display:flex;align-items:center;gap:6px;margin:3px 0">
-                        <span style="width:8px;height:8px;border-radius:50%;background:${p.color};display:inline-block"></span>
-                        <span style="color:#8892a4">${p.seriesName}:</span>
-                        <span style="font-weight:700">${val}${unit}</span>
+                    html += `<div style="display:flex;align-items:center;gap:6px;margin:2px 0">
+                        <span style="width:6px;height:6px;border-radius:50%;background:${p.color};display:inline-block;flex-shrink:0"></span>
+                        <span style="color:${legendTx}">${p.seriesName}</span>
+                        <span style="font-weight:600;margin-left:auto;padding-left:12px">${val}${unit}</span>
                     </div>`;
                 });
                 return html;
             }
         },
         legend: {
-            bottom: 4,
-            textStyle: { color: '#8892a4', fontSize: 11, fontFamily: 'JetBrains Mono, monospace' },
-            itemWidth: 14, itemHeight: 4,
+            bottom: 2,
+            textStyle: { color: legendTx, fontSize: 10, fontFamily: 'JetBrains Mono, monospace' },
+            itemWidth: 12, itemHeight: 3,
             data: ['Temperatura', 'Humedad', 'CO2']
         },
-        dataZoom: [
-            {
-                type: 'inside',
-                filterMode: 'none',
-                zoomOnMouseWheel: true,
-                moveOnMouseMove: true
-            }
-        ],
+        dataZoom: [{ type: 'inside', filterMode: 'none', zoomOnMouseWheel: true, moveOnMouseMove: true }],
         xAxis: {
-            type: 'time',
-            boundaryGap: false,
-            min: 'dataMin',
-            max: 'dataMax',
-            splitLine:  { show: true, lineStyle: { color: '#252a38', type: 'dashed' } },
-            axisLine:   { lineStyle: { color: '#252a38' } },
-            axisTick:   { lineStyle: { color: '#252a38' } },
+            type: 'time', boundaryGap: false, min: 'dataMin', max: 'dataMax',
+            splitLine:  { show: true, lineStyle: { color: grid, type: 'dashed', width: 1 } },
+            axisLine:   { lineStyle: { color: axisLine } },
+            axisTick:   { show: false },
             axisLabel:  {
-                color: '#545e6f', fontSize: 10, fontFamily: 'JetBrains Mono, monospace',
+                color: axisLabel, fontSize: 9, fontFamily: 'JetBrains Mono, monospace',
                 formatter: (value) => {
                     const d = new Date(value);
                     return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
@@ -155,51 +155,46 @@ function buildBaseChartOption() {
         },
         yAxis: [
             {
-                name: '°C', nameTextStyle: { color: '#f04040', fontSize: 10 },
+                name: '°C', nameTextStyle: { color: '#f04040', fontSize: 9, fontFamily: 'JetBrains Mono, monospace' },
                 min: 0, max: 50,
-                splitLine: { lineStyle: { color: '#252a38', type: 'dashed' } },
-                axisLine:  { lineStyle: { color: '#252a38' } },
-                axisTick:  { lineStyle: { color: '#252a38' } },
-                axisLabel: { color: '#545e6f', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }
+                splitLine: { lineStyle: { color: grid, type: 'dashed', width: 1 } },
+                axisLine:  { show: false }, axisTick: { show: false },
+                axisLabel: { color: axisLabel, fontSize: 9, fontFamily: 'JetBrains Mono, monospace' }
             },
             {
-                name: '%', nameTextStyle: { color: '#4a9eff', fontSize: 10 },
+                name: '%', nameTextStyle: { color: '#4a9eff', fontSize: 9, fontFamily: 'JetBrains Mono, monospace' },
                 min: 0, max: 100, position: 'right', offset: 0,
-                splitLine: { show: false },
-                axisLine:  { lineStyle: { color: '#252a38' } },
-                axisTick:  { lineStyle: { color: '#252a38' } },
-                axisLabel: { color: '#545e6f', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }
+                splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false },
+                axisLabel: { color: axisLabel, fontSize: 9, fontFamily: 'JetBrains Mono, monospace' }
             },
             {
-                name: 'PPM', nameTextStyle: { color: '#1dd38a', fontSize: 10 },
-                min: 0, max: 1000, position: 'right', offset: 55,
-                splitLine: { show: false },
-                axisLine:  { lineStyle: { color: '#252a38' } },
-                axisTick:  { lineStyle: { color: '#252a38' } },
-                axisLabel: { color: '#545e6f', fontSize: 10, fontFamily: 'JetBrains Mono, monospace' }
+                name: 'PPM', nameTextStyle: { color: '#1dd38a', fontSize: 9, fontFamily: 'JetBrains Mono, monospace' },
+                min: 0, max: 2000, position: 'right', offset: 48,
+                splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false },
+                axisLabel: { color: axisLabel, fontSize: 9, fontFamily: 'JetBrains Mono, monospace' }
             }
         ],
         series: [
             {
                 name: 'Temperatura', type: 'line', yAxisIndex: 0, data: [],
-                lineStyle: { color: '#f04040', width: 2 }, itemStyle: { color: '#f04040' },
-                symbol: 'none', smooth: 0.3,
+                lineStyle: { color: '#f04040', width: 1.5 }, itemStyle: { color: '#f04040' },
+                symbol: 'none', smooth: false,
                 areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: 'rgba(240,64,64,0.15)' }, { offset: 1, color: 'rgba(240,64,64,0)' }] } }
+                    colorStops: [{ offset: 0, color: 'rgba(240,64,64,0.1)' }, { offset: 1, color: 'rgba(240,64,64,0)' }] } }
             },
             {
                 name: 'Humedad', type: 'line', yAxisIndex: 1, data: [],
-                lineStyle: { color: '#4a9eff', width: 2 }, itemStyle: { color: '#4a9eff' },
-                symbol: 'none', smooth: 0.3,
+                lineStyle: { color: '#4a9eff', width: 1.5 }, itemStyle: { color: '#4a9eff' },
+                symbol: 'none', smooth: false,
                 areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: 'rgba(74,158,255,0.12)' }, { offset: 1, color: 'rgba(74,158,255,0)' }] } }
+                    colorStops: [{ offset: 0, color: 'rgba(74,158,255,0.08)' }, { offset: 1, color: 'rgba(74,158,255,0)' }] } }
             },
             {
                 name: 'CO2', type: 'line', yAxisIndex: 2, data: [],
-                lineStyle: { color: '#1dd38a', width: 2 }, itemStyle: { color: '#1dd38a' },
-                symbol: 'none', smooth: 0.3,
+                lineStyle: { color: '#1dd38a', width: 1.5 }, itemStyle: { color: '#1dd38a' },
+                symbol: 'none', smooth: false,
                 areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: 'rgba(29,211,138,0.12)' }, { offset: 1, color: 'rgba(29,211,138,0)' }] } }
+                    colorStops: [{ offset: 0, color: 'rgba(29,211,138,0.08)' }, { offset: 1, color: 'rgba(29,211,138,0)' }] } }
             }
         ]
     };

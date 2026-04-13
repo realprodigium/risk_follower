@@ -1,58 +1,78 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Craft Brewery - Iniciar Sesión</title>
-  <link href="{{ url_for('static', path='css/login.css') }}" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seven Waves - Iniciar Sesión</title>
+    <link href="{{ url_for('static', path='css/login.css') }}" rel="stylesheet">
 </head>
 <body>
-  <div class="backdrop"></div>
 
-  <main class="container">
+<div class="backdrop"></div>
+
+<main class="container">
+        <div class="mode">
+            <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+                <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            </button>
+        </div>
     <section class="card">
-      <div class="card-shine"></div>
+        <div class="card-shine"></div>
 
-      <header class="card-header">
-        <div class="logo">
-          <img src="{{ url_for('static', path='icons/beer.svg') }}" alt="">
-        </div>
-        <h1>Craft Brewery</h1>
-        <p class="subtitle">Sistema de Monitoreo CO2</p>
-      </header>
-      <form class="form" id="login-form">
-        <div class="input-group">
-          <label for="username">Usuario</label>
-          <div class="input-wrapper">
-            <img class="input-icon" src="{{ url_for('static', path='icons/user-round.svg') }}" alt="">
-            <input type="text" id="username" name="username" placeholder="Ingresa tu usuario" required autocomplete="username">
-          </div>
-        </div>
+        <header class="card-header">
+            <div class="logo">
+                <img src="{{ url_for('static', path='icons/beer.svg') }}" alt="">
+            </div>
+            <h1>Seven Waves</h1>
+            <p class="subtitle">Sistema de monitoreo CO2</p>
+        </header>
 
-        <div class="input-group">
-          <label for="password">Contraseña</label>
-          <div class="input-wrapper">
-            <img class="input-icon" src="{{ url_for('static', path='icons/key-round.svg') }}" alt="">
-            <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
-          </div>
-        </div>
+        <form class="form" id="login-form">
+            <div class="input-group">
+                <label for="username">Usuario</label>
+                <div class="input-wrapper">
+                    <img class="input-icon" src="{{ url_for('static', path='icons/user-round.svg') }}" alt="">
+                    <input type="text" id="username" name="username"
+                           placeholder="Ingresa tu usuario" required autocomplete="username">
+                </div>
+            </div>
 
-        <div class="options">
-          <label class="checkbox-wrapper">
-            <input type="checkbox" name="remember">
-            <span class="checkmark"></span>
-            <span class="checkbox-label">Recordarme</span>
-          </label>
-        </div>
+            <div class="input-group">
+                <label for="password">Contraseña</label>
+                <div class="input-wrapper">
+                    <img class="input-icon" src="{{ url_for('static', path='icons/key-round.svg') }}" alt="">
+                    <input type="password" id="password" name="password"
+                           placeholder="••••••••" required autocomplete="current-password">
+                </div>
+            </div>
 
-        <button type="submit" class="btn-primary">
-          <span>Acceder</span>
-          <img src="{{ url_for('static', path='icons/move-right.svg') }}" alt="">
-        </button>
-      </form>
+
+            <button type="submit" class="btn-primary">
+                <span>Acceder al sistema</span>
+                <img src="{{ url_for('static', path='icons/move-right.svg') }}" alt="">
+            </button>
+        </form>
     </section>
-  </main>
-  <script src="{{ url_for('static', path='js/login.js') }}"></script>
-  
+
+    <p class="copyright">2026 | Cervecería Seven Waves · Sistema de monitoreo industrial</p>
+</main>
+
+<script>
+(function() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+    });
+})();
+</script>
+<script src="{{ url_for('static', path='js/login.js') }}"></script>
 </body>
 </html>

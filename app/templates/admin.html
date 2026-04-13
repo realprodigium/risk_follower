@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CO2 Monitor — Panel de Administración</title>
+    <title>Seven Waves — Administración</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link href="{{ url_for('static', path='css/main.css') }}" rel="stylesheet">
     <link href="{{ url_for('static', path='css/admin.css') }}" rel="stylesheet">
 </head>
@@ -16,32 +16,36 @@
     <div class="topbar-inner">
         <div class="brand">
             <div class="brand-text">
-                <span class="brand-name">Cerveceria Seven Waves</span>
-                <span class="brand-sub">Panel de Administración</span>
+                <span class="brand-name">Cervecería Seven Waves</span>
+                <span class="brand-sub">Administración</span>
             </div>
         </div>
         <nav class="top-nav">
             <a href="/" class="nav-item">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
                 Dashboard
             </a>
             <a href="/history" class="nav-item">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Historial
             </a>
             <a href="/admin" class="nav-item active">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 Admin
             </a>
         </nav>
         <div class="user-zone">
+            <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+                <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg>
+            </button>
             <div class="user-avatar" id="user-avatar">A</div>
             <div class="user-info">
-                <span id="user-display">Cargando...</span>
+                <span id="user-display">Cargando…</span>
                 <span id="user-role">--</span>
             </div>
             <button class="logout-btn" id="logout-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                 Salir
             </button>
         </div>
@@ -50,60 +54,45 @@
 
 <main class="admin-layout">
 
-    <!-- Page header -->
+    <!-- Header -->
     <div class="admin-page-header">
         <div>
-            <h1 class="admin-title">Panel de Administración</h1>
-            <p class="admin-desc">Control total del sistema · Usuarios · Umbrales · Auditoría</p>
+            <h1 class="admin-title">Panel de administración</h1>
+            <p class="admin-desc">usuarios · umbrales · auditoría</p>
         </div>
         <button class="refresh-all-btn" id="refresh-all">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             Actualizar todo
         </button>
     </div>
 
-    <!-- Stats row -->
-    <div class="stats-row" id="stats-row">
+    <!-- Stats -->
+    <div class="stats-row">
         <div class="stat-card">
-            <div class="stat-icon stat-icon--blue">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </div>
             <div class="stat-body">
                 <span class="stat-value" id="stat-records">--</span>
                 <span class="stat-label">Registros totales</span>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--purple">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-            </div>
             <div class="stat-body">
                 <span class="stat-value" id="stat-users">--</span>
                 <span class="stat-label">Usuarios activos</span>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--green">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            </div>
             <div class="stat-body">
                 <span class="stat-value" id="stat-devices">--</span>
-                <span class="stat-label">Dispositivos activos</span>
+                <span class="stat-label">Dispositivos</span>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--red">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </div>
             <div class="stat-body">
                 <span class="stat-value" id="stat-alarms">--</span>
                 <span class="stat-label">Alarmas totales</span>
             </div>
         </div>
         <div class="stat-card">
-            <div class="stat-icon stat-icon--orange">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
             <div class="stat-body">
                 <span class="stat-value" id="stat-today">--</span>
                 <span class="stat-label">Registros hoy</span>
@@ -111,23 +100,22 @@
         </div>
     </div>
 
-    <!-- Main grid: Users + Thresholds -->
+    <!-- Grid: users + thresholds -->
     <div class="admin-grid">
 
-        <!-- User management -->
+        <!-- Users -->
         <div class="admin-card">
             <div class="admin-card-header">
                 <div>
-                    <h2 class="admin-card-title">Gestión de Usuarios</h2>
+                    <h2 class="admin-card-title">Gestión de usuarios</h2>
                     <span class="admin-card-sub">Operadores y accesos al sistema</span>
                 </div>
                 <button class="btn-create" id="toggle-create-user">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Nuevo usuario
                 </button>
             </div>
 
-            <!-- Create user form (hidden by default) -->
             <div class="create-user-form hidden" id="create-user-form">
                 <div class="form-row">
                     <div class="form-group">
@@ -154,77 +142,62 @@
                 <div class="form-error hidden" id="create-user-error"></div>
             </div>
 
-            <!-- Users table -->
             <div class="admin-table-wrapper">
-                <table class="admin-table" id="users-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Usuario</th>
-                            <th>Rol</th>
-                            <th>Creado</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
+                <table class="admin-table">
+                    <thead><tr><th>ID</th><th>Usuario</th><th>Rol</th><th>Creado</th><th>Acciones</th></tr></thead>
                     <tbody id="users-tbody">
-                        <tr><td colspan="5"><div class="table-loading"><div class="spinner"></div><span>Cargando...</span></div></td></tr>
+                        <tr><td colspan="5"><div class="table-loading"><div class="spinner"></div><span>Cargando…</span></div></td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Thresholds config -->
+        <!-- Thresholds -->
         <div class="admin-card">
             <div class="admin-card-header">
                 <div>
-                    <h2 class="admin-card-title">Umbrales de Alerta</h2>
+                    <h2 class="admin-card-title">Umbrales de alerta</h2>
                     <span class="admin-card-sub" id="thresholds-updated">Última actualización: --</span>
                 </div>
                 <span class="threshold-badge">CO2 · Temp · Hum</span>
             </div>
 
-            <div class="thresholds-form" id="thresholds-form">
+            <div class="thresholds-form">
                 <div class="threshold-group">
-                    <div class="threshold-group-label">
-                        <span class="tg-dot tg-dot--green"></span>CO2 (PPM)
-                    </div>
+                    <div class="threshold-group-label"><span class="tg-dot tg-dot--green"></span>CO2 (PPM)</div>
                     <div class="threshold-row">
                         <div class="form-group">
-                            <label class="form-label">Umbral Alto ↑</label>
+                            <label class="form-label">Umbral alto ↑</label>
                             <input type="number" class="form-input" id="th-co2-high" placeholder="1000" step="10">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Umbral Bajo ↓</label>
+                            <label class="form-label">Umbral bajo ↓</label>
                             <input type="number" class="form-input" id="th-co2-low" placeholder="400" step="10">
                         </div>
                     </div>
                 </div>
                 <div class="threshold-group">
-                    <div class="threshold-group-label">
-                        <span class="tg-dot tg-dot--red"></span>Temperatura (°C)
-                    </div>
+                    <div class="threshold-group-label"><span class="tg-dot tg-dot--red"></span>Temperatura (°C)</div>
                     <div class="threshold-row">
                         <div class="form-group">
-                            <label class="form-label">Umbral Alto ↑</label>
+                            <label class="form-label">Umbral alto ↑</label>
                             <input type="number" class="form-input" id="th-temp-high" placeholder="35" step="0.5">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Umbral Bajo ↓</label>
+                            <label class="form-label">Umbral bajo ↓</label>
                             <input type="number" class="form-input" id="th-temp-low" placeholder="15" step="0.5">
                         </div>
                     </div>
                 </div>
                 <div class="threshold-group">
-                    <div class="threshold-group-label">
-                        <span class="tg-dot tg-dot--blue"></span>Humedad (%)
-                    </div>
+                    <div class="threshold-group-label"><span class="tg-dot tg-dot--blue"></span>Humedad (%)</div>
                     <div class="threshold-row">
                         <div class="form-group">
-                            <label class="form-label">Umbral Alto ↑</label>
+                            <label class="form-label">Umbral alto ↑</label>
                             <input type="number" class="form-input" id="th-hum-high" placeholder="80" step="1" min="0" max="100">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Umbral Bajo ↓</label>
+                            <label class="form-label">Umbral bajo ↓</label>
                             <input type="number" class="form-input" id="th-hum-low" placeholder="30" step="1" min="0" max="100">
                         </div>
                     </div>
@@ -239,35 +212,28 @@
 
     </div><!-- /admin-grid -->
 
-    <!-- Audit log (full width) -->
+    <!-- Audit log -->
     <div class="admin-card">
         <div class="admin-card-header">
             <div>
-                <h2 class="admin-card-title">Registro de Auditoría</h2>
+                <h2 class="admin-card-title">Registro de auditoría</h2>
                 <span class="admin-card-sub">Últimas 150 acciones del sistema</span>
             </div>
-            <button class="icon-btn" id="refresh-audit" title="Recargar auditoría">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            <button class="icon-btn" id="refresh-audit" title="Recargar">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
             </button>
         </div>
         <div class="admin-table-wrapper audit-wrapper">
             <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Timestamp</th>
-                        <th>Usuario</th>
-                        <th>Acción</th>
-                        <th>Detalle</th>
-                    </tr>
-                </thead>
+                <thead><tr><th>Timestamp</th><th>Usuario</th><th>Acción</th><th>Detalle</th></tr></thead>
                 <tbody id="audit-tbody">
-                    <tr><td colspan="4"><div class="table-loading"><div class="spinner"></div><span>Cargando...</span></div></td></tr>
+                    <tr><td colspan="4"><div class="table-loading"><div class="spinner"></div><span>Cargando…</span></div></td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Edit role modal -->
+    <!-- Edit user modal -->
     <div class="modal-overlay hidden" id="edit-modal">
         <div class="modal">
             <div class="modal-header">
@@ -289,20 +255,34 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Nueva contraseña <span style="color:var(--text-muted)">(dejar vacío para no cambiar)</span></label>
+                    <label class="form-label">Nueva contraseña <span style="color:var(--text-muted);font-weight:400">(dejar vacío para no cambiar)</span></label>
                     <input type="password" class="form-input" id="edit-password" placeholder="mín. 8 caracteres">
                 </div>
                 <div class="form-error hidden" id="edit-error"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" id="modal-cancel">Cancelar</button>
-                <button class="btn-save"   id="modal-save">Guardar</button>
+                <button class="btn-save" id="modal-save">Guardar</button>
             </div>
         </div>
     </div>
 
 </main>
 
+<script>
+(function() {
+    const saved = localStorage.getItem('theme') || 'dark';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+    });
+})();
+</script>
 <script src="{{ url_for('static', path='js/auth.js') }}"></script>
 <script src="{{ url_for('static', path='js/admin.js') }}"></script>
 </body>
