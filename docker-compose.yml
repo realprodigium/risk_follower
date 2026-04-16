@@ -1,9 +1,7 @@
 version: '3.8'
 
 services:
-  # ─────────────────────────────────────────────────────────────────────────────
-  # FastAPI Backend Server
-  # ─────────────────────────────────────────────────────────────────────────────
+
   web:
     build: .
     container_name: co2_backend
@@ -24,9 +22,6 @@ services:
       timeout: 10s
       retries: 3
 
-  # ─────────────────────────────────────────────────────────────────────────────
-  # PostgreSQL Database
-  # ─────────────────────────────────────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     container_name: co2_postgres
@@ -46,15 +41,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # MQTT Broker - EMQX (for local development only)
-  # 
-  # NOTA IMPORTANTE:
-  # - Este servicio es SOLO para desarrollo local
-  # - En PRODUCCIÓN: Usar HiveMQ Cloud (broker: your-cluster.s1.eu.hivemq.cloud)
-  # - Ver DEPLOYMENT.md para configuración en producción
-  # ─────────────────────────────────────────────────────────────────────────────
+#esto solo sirve en desarrollo, en produccion ya esta setup con hivemq
   emqx:
     image: emqx:5.8
     container_name: co2_emqx
@@ -62,9 +49,9 @@ services:
     environment:
       EMQX_LISTENERS__TCP__DEFAULT__ACCEPTORS: 16384
     ports:
-      - "1883:1883"     # MQTT
-      - "8083:8083"     # WebSocket
-      - "18083:18083"   # Dashboard (admin/public)
+      - "1883:1883"     
+      - "8083:8083"     
+      - "18083:18083"   
     volumes:
       - ./emqx/data:/opt/emqx/data
     networks:

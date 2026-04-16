@@ -1,7 +1,3 @@
-"""
-Servicio de acceso a registros de sensores.
-Asegura que todos los datos consumidos cumplan con validaciones y formatos.
-"""
 import logging
 from datetime import datetime, timezone
 from typing import Optional, List
@@ -13,10 +9,8 @@ logger = logging.getLogger(__name__)
 
 
 class RecordService:
-    """Capa de servicios para acceso a registros de BD"""
-
     @staticmethod
-    def get_records(
+    def get_records(#son los filtros que se aplican a la query
         db: Session,
         limit: int = 1000,
         offset: int = 0,
@@ -25,21 +19,7 @@ class RecordService:
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
     ) -> List[models.Records]:
-        """
-        Obtiene registros de la BD con filtros opcionales.
         
-        Args:
-            db: Sesión de base de datos
-            limit: Máximo de registros a retornar (1-5000)
-            offset: Registros a saltar
-            hardware: Filtrar por ID de hardware
-            risk: Filtrar por nivel de riesgo (alto|normal|bajo)
-            date_from: Timestamp mínimo (inclusive)
-            date_to: Timestamp máximo (inclusive)
-            
-        Returns:
-            Lista de modelos.Records
-        """
         query = db.query(models.Records)
 
         filters = []
@@ -66,7 +46,6 @@ class RecordService:
 
     @staticmethod
     def get_latest_records(db: Session, hardware: Optional[str] = None, limit: int = 50) -> List[models.Records]:
-        """Obtiene los últimos N registros, opcionalmente por hardware"""
         query = db.query(models.Records)
         if hardware:
             query = query.filter(models.Records.hardware == hardware.strip())
@@ -74,24 +53,15 @@ class RecordService:
 
     @staticmethod
     def get_record_by_id(db: Session, record_id: int) -> Optional[models.Records]:
-        """Obtiene un registro específico por ID"""
         return db.query(models.Records).filter(models.Records.id == record_id).first()
 
     @staticmethod
     def get_hardware_devices(db: Session) -> List[str]:
-        """Obtiene lista única de dispositivos hardware registrados"""
         devices = db.query(models.Records.hardware.distinct()).all()
         return sorted([d[0] for d in devices if d[0]])
 
     @staticmethod
     def get_statistics(db: Session, hardware: Optional[str] = None) -> dict:
-        """
-        Obtiene estadísticas de los registros.
-        
-        Returns:
-            Dict con: total_records, avg_temp, avg_humidity, avg_co2, 
-                     min_co2, max_co2, latest_timestamp
-        """
         query = db.query(models.Records)
         if hardware:
             query = query.filter(models.Records.hardware == hardware.strip())
@@ -124,7 +94,6 @@ class RecordService:
 
     @staticmethod
     def delete_record(db: Session, record_id: int) -> bool:
-        """Elimina un registro específico"""
         record = db.query(models.Records).filter(models.Records.id == record_id).first()
         if not record:
             return False
@@ -138,6 +107,5 @@ class RecordService:
             db.rollback()
             logger.error(f"Error deleting record {record_id}: {exc}")
             return False
-
 
 record_service = RecordService()
