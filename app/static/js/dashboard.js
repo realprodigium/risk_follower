@@ -3,11 +3,15 @@ let websocket = null;
 let ws_reconnect_attempts = 0;
 const WS_MAX_RECONNECT   = 10;
 const WS_RECONNECT_DELAY = 3000;
+let absoluteFirstTs = null;
 
-const MAX_POINTS  = 10;
+const MAX_POINTS  = 3600;
 
 let activeTimeMs  = 60_000;
 let activeHardware = 'all';
+const CO2_THRESHOLD_WARN   = 1000;
+const CO2_THRESHOLD_DANGER = 5000;
+const CO2_AXIS_MAX         = 6000;
 
 const history = {
     timestamps:  [],
@@ -55,7 +59,8 @@ function _doChartRender() {
         xMin = latestTs - activeTimeMs;
         xMax = latestTs + activeTimeMs * 0.05;
     } else {
-        xMin = 'dataMin';
+        // "Todo" mode: Use the absolute first point of the session if available
+        xMin = absoluteFirstTs || 'dataMin';
         xMax = 'dataMax';
     }
 
@@ -156,7 +161,7 @@ function buildBaseChartOption() {
         yAxis: [
             {
                 name: '°C', nameTextStyle: { color: '#f04040', fontSize: 9, fontFamily: 'JetBrains Mono, monospace' },
-                min: 0, max: 50,
+                min: 0, max: 60,
                 splitLine: { lineStyle: { color: grid, type: 'dashed', width: 1 } },
                 axisLine:  { show: false }, axisTick: { show: false },
                 axisLabel: { color: axisLabel, fontSize: 9, fontFamily: 'JetBrains Mono, monospace' }
@@ -169,7 +174,7 @@ function buildBaseChartOption() {
             },
             {
                 name: 'PPM', nameTextStyle: { color: '#1dd38a', fontSize: 9, fontFamily: 'JetBrains Mono, monospace' },
-                min: 0, max: 2000, position: 'right', offset: 48,
+                min: 200, max: CO2_AXIS_MAX, position: 'right', offset: 48,
                 splitLine: { show: false }, axisLine: { show: false }, axisTick: { show: false },
                 axisLabel: { color: axisLabel, fontSize: 9, fontFamily: 'JetBrains Mono, monospace' }
             }
@@ -180,21 +185,39 @@ function buildBaseChartOption() {
                 lineStyle: { color: '#f04040', width: 1.5 }, itemStyle: { color: '#f04040' },
                 symbol: 'none', smooth: false,
                 areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: 'rgba(240,64,64,0.1)' }, { offset: 1, color: 'rgba(240,64,64,0)' }] } }
+                    colorStops: [{ offset: 0, color: 'rgba(240,64,64,0.1)' }, { offset: 1, color: 'rgba(240,64,64,0)' }] } },
+                markLine: {
+                    silent: true,
+                    data: [{ yAxis: 60, label: { formatter: 'Max 60°C' } }]
+                }
             },
             {
                 name: 'Humedad', type: 'line', yAxisIndex: 1, data: [],
                 lineStyle: { color: '#4a9eff', width: 1.5 }, itemStyle: { color: '#4a9eff' },
                 symbol: 'none', smooth: false,
                 areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: 'rgba(74,158,255,0.08)' }, { offset: 1, color: 'rgba(74,158,255,0)' }] } }
+                    colorStops: [{ offset: 0, color: 'rgba(74,158,255,0.08)' }, { offset: 1, color: 'rgba(74,158,255,0)' }] } },
+                markLine: {
+                    silent: true,
+                    data: [{ yAxis: 100, label: { formatter: 'Max 100%' } }]
+                }
             },
             {
                 name: 'CO2', type: 'line', yAxisIndex: 2, data: [],
                 lineStyle: { color: '#1dd38a', width: 1.5 }, itemStyle: { color: '#1dd38a' },
                 symbol: 'none', smooth: false,
                 areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-                    colorStops: [{ offset: 0, color: 'rgba(29,211,138,0.08)' }, { offset: 1, color: 'rgba(29,211,138,0)' }] } }
+                    colorStops: [{ offset: 0, color: 'rgba(29,211,138,0.08)' }, { offset: 1, color: 'rgba(29,211,138,0)' }] } },
+                markLine: {
+                    silent: true,
+                    symbol: ['none', 'none'],
+                    label: { position: 'end', fontSize: 8, fontFamily: 'JetBrains Mono, monospace' },
+                    lineStyle: { type: 'dashed', width: 1 },
+                    data: [
+                        { yAxis: CO2_THRESHOLD_WARN,   label: { formatter: 'Warn 1k' }, lineStyle: { color: '#ffc107', opacity: 0.6 } },
+                        { yAxis: CO2_THRESHOLD_DANGER, label: { formatter: 'Danger 5k' }, lineStyle: { color: '#f04040', opacity: 0.8 } }
+                    ]
+                }
             }
         ]
     };
@@ -237,13 +260,20 @@ function normalizePoint(raw) {
     } else {
         ts = new Date(tsStr + 'Z').getTime();
     }
+    const co2Val = parseFloat(raw.co2);
+    let risk = raw.risk || 'normal';
+
+    // Brewery specific CO2 thresholds
+    if (co2Val > CO2_THRESHOLD_DANGER) risk = 'peligro';
+    else if (co2Val > CO2_THRESHOLD_WARN) risk = 'advertencia';
+
     return {
         timestamp:   ts,
         hardware:    raw.hardware || 'Unknown',
         temperature: parseFloat(raw.temperature),
         humidity:    parseFloat(raw.humidity),
-        co2:         parseFloat(raw.co2),
-        risk:        raw.risk || 'normal'
+        co2:         co2Val,
+        risk:        risk
     };
 }
 
@@ -257,6 +287,7 @@ function isDuplicate(point) {
 }
 
 function ingestPoint(point, isRealtime) {
+    if (absoluteFirstTs === null) absoluteFirstTs = point.timestamp;
     history.timestamps.push(point.timestamp);
     history.temperature.push(point.temperature);
     history.humidity.push(point.humidity);
@@ -293,7 +324,7 @@ function ingestPoint(point, isRealtime) {
 
 function updateCards(point) {
     setMetricValue('temp-value',     point.temperature.toFixed(1));
-    setBar('temp-bar', (point.temperature / 50) * 100);
+    setBar('temp-bar', (point.temperature / 60) * 100);
     setTrend('temp-trend', sparkHistory.temp);
     drawSparkline(sparkCtx.temp, sparkHistory.temp, '#f04040');
 
@@ -303,7 +334,7 @@ function updateCards(point) {
     drawSparkline(sparkCtx.humidity, sparkHistory.humidity, '#4a9eff');
 
     setMetricValue('co2-value', point.co2.toFixed(0));
-    setBar('co2-bar', (point.co2 / 2000) * 100);
+    setBar('co2-bar', (point.co2 / CO2_AXIS_MAX) * 100);
     setTrend('co2-trend', sparkHistory.co2);
     drawSparkline(sparkCtx.co2, sparkHistory.co2, '#1dd38a');
 
@@ -372,13 +403,16 @@ function drawSparkline(ctx, data, color) {
 
 function updateAlertBanner(point) {
     if (point.risk === 'normal') return;
+    const banner = document.getElementById('alarm-banner');
+    banner.className = `alarm-banner status-${point.risk}`;
+    
     document.getElementById('alarm-message').textContent =
-        `Nivel ${riskLabel(point.risk).toLowerCase()} detectado en ${point.hardware}`;
+        `${riskLabel(point.risk)} detected in ${point.hardware}`;
     document.getElementById('alarm-sensors').innerHTML = `
-        <span class="alarm-sensor-tag">${point.hardware}</span>
-        <span class="alarm-sensor-tag">CO2: ${point.co2.toFixed(0)} PPM</span>
-        <span class="alarm-sensor-tag">Temp: ${point.temperature.toFixed(1)}°C</span>`;
-    document.getElementById('alarm-banner').classList.remove('hidden');
+        <span class="sbadge status-${point.risk}">${point.hardware}</span>
+        <span class="sbadge status-${point.risk}">CO2: ${point.co2.toFixed(0)} PPM</span>
+        <span class="sbadge status-${point.risk}">Temp: ${point.temperature.toFixed(1)}°C</span>`;
+    banner.classList.remove('hidden');
     document.body.classList.add('alarm-active');
 }
 
@@ -464,7 +498,16 @@ function setConnectionStatus(state) {
 }
 
 function riskLabel(risk) {
-    return { normal: 'Normal', alto: 'Alto', bajo: 'Bajo', high: 'Alto', low: 'Bajo' }[risk] || risk;
+    const labels = {
+        normal:      'Normal',
+        alto:        'Alto',
+        bajo:        'Bajo',
+        high:        'Alto',
+        low:         'Bajo',
+        advertencia: 'Advertencia',
+        peligro:     'Peligro'
+    };
+    return labels[risk] || risk;
 }
 
 function formatTs(ms) {

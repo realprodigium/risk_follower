@@ -26,6 +26,12 @@
     --status-bajo-bg:    rgba(255,140,66,0.07);
     --status-bajo-bd:    rgba(255,140,66,0.2);
     --status-bajo-fg:    #ff8c42;
+    --status-advertencia-bg: rgba(255, 193, 7, 0.08);
+    --status-advertencia-bd: rgba(255, 193, 7, 0.25);
+    --status-advertencia-fg: #ffc107;
+    --status-peligro-bg:     rgba(240, 64, 64, 0.1);
+    --status-peligro-bd:     rgba(240, 64, 64, 0.3);
+    --status-peligro-fg:     #f04040;
     --chart-temp:     #f04040;
     --chart-humidity: #4a9eff;
     --chart-co2:      #1dd38a;
@@ -73,6 +79,12 @@
     --status-bajo-bg:    #FBF3DB;
     --status-bajo-bd:    rgba(149,100,0,0.22);
     --status-bajo-fg:    #956400;
+    --status-advertencia-bg: #FFF9E6;
+    --status-advertencia-bd: rgba(212, 167, 0, 0.25);
+    --status-advertencia-fg: #D4A700;
+    --status-peligro-bg:     #FDEBEC;
+    --status-peligro-bd:     rgba(159, 47, 45, 0.25);
+    --status-peligro-fg:     #9F2F2D;
 
     --shadow-card:  0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
     --shadow-float: 0 8px 48px rgba(0,0,0,0.14);
@@ -100,6 +112,14 @@ body {
     border-bottom: 1px solid var(--status-alto-bd);
     animation: alarmSlide 0.4s var(--ease-out);
 }
+.alarm-banner.status-advertencia { border-bottom-color: var(--status-advertencia-bd); }
+.alarm-banner.status-advertencia .alarm-icon { color: var(--status-advertencia-fg); }
+.alarm-banner.status-advertencia .alarm-label { color: var(--status-advertencia-fg); }
+
+.alarm-banner.status-peligro { border-bottom-color: var(--status-peligro-bd); }
+.alarm-banner.status-peligro .alarm-icon { color: var(--status-peligro-fg); }
+.alarm-banner.status-peligro .alarm-label { color: var(--status-peligro-fg); }
+
 .alarm-banner.hidden { display: none; }
 @keyframes alarmSlide {
     from { transform: translateY(-100%); opacity: 0; }
@@ -245,6 +265,8 @@ body.alarm-active { padding-top: 50px; }
 .current-status-pill.status-normal { background: var(--status-normal-bg); border-color: var(--status-normal-bd); color: var(--status-normal-fg); }
 .current-status-pill.status-alto   { background: var(--status-alto-bg);   border-color: var(--status-alto-bd);   color: var(--status-alto-fg); }
 .current-status-pill.status-bajo   { background: var(--status-bajo-bg);   border-color: var(--status-bajo-bd);   color: var(--status-bajo-fg); }
+.current-status-pill.status-advertencia { background: var(--status-advertencia-bg); border-color: var(--status-advertencia-bd); color: var(--status-advertencia-fg); }
+.current-status-pill.status-peligro     { background: var(--status-peligro-bg);     border-color: var(--status-peligro-bd);     color: var(--status-peligro-fg); }
 .status-dot-lg { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: connPulse 2s ease-in-out infinite; }
 .last-update-label { font-size: 0.68rem; font-family: var(--font-mono); color: var(--text-muted); }
 .sensor-filter-label { font-size: 0.6rem; font-family: var(--font-mono); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
@@ -341,6 +363,8 @@ body.alarm-active { padding-top: 50px; }
 .big-status-badge.status-normal { background: var(--status-normal-bg); border-color: var(--status-normal-bd); color: var(--status-normal-fg); }
 .big-status-badge.status-alto   { background: var(--status-alto-bg);   border-color: var(--status-alto-bd);   color: var(--status-alto-fg); }
 .big-status-badge.status-bajo   { background: var(--status-bajo-bg);   border-color: var(--status-bajo-bd);   color: var(--status-bajo-fg); }
+.big-status-badge.status-advertencia { background: var(--status-advertencia-bg); border-color: var(--status-advertencia-bd); color: var(--status-advertencia-fg); }
+.big-status-badge.status-peligro     { background: var(--status-peligro-bg);     border-color: var(--status-peligro-bd);     color: var(--status-peligro-fg); }
 .big-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: connPulse 2s ease-in-out infinite; }
 .status-details { display: flex; flex-direction: column; gap: 0; }
 .status-detail-row {
@@ -418,6 +442,8 @@ body.alarm-active { padding-top: 50px; }
 .sbadge.status-normal { background: var(--status-normal-bg); border: 1px solid var(--status-normal-bd); color: var(--status-normal-fg); }
 .sbadge.status-alto   { background: var(--status-alto-bg);   border: 1px solid var(--status-alto-bd);   color: var(--status-alto-fg); }
 .sbadge.status-bajo   { background: var(--status-bajo-bg);   border: 1px solid var(--status-bajo-bd);   color: var(--status-bajo-fg); }
+.sbadge.status-advertencia { background: var(--status-advertencia-bg); border: 1px solid var(--status-advertencia-bd); color: var(--status-advertencia-fg); }
+.sbadge.status-peligro     { background: var(--status-peligro-bg);     border: 1px solid var(--status-peligro-bd);     color: var(--status-peligro-fg); }
 
 .empty-state {
     display: flex; align-items: center; justify-content: center; gap: 0.75rem;

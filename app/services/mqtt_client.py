@@ -151,5 +151,4 @@ class MQTTSubscriber:
         if self.task:
             self.task.cancel()
 
-
 mqtt_subscriber = MQTTSubscriber()
