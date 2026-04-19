@@ -47,7 +47,7 @@
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                 Historial
             </a>
-            <a href="/admin" class="nav-item admin-only" id="nav-admin" style="display:none">
+            <a href="/admin" class="nav-item admin-only" target="_blank" id="nav-admin" style="display:none">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 Admin
             </a>
@@ -180,30 +180,26 @@
 
     </div>
 
+    <div class="charts-row">
     <div class="chart-card">
         <div class="chart-card-header">
-            <div class="chart-title-group">
-                <h2 class="chart-title">Monitoreo en tiempo real</h2>
-                <span class="chart-subtitle" id="chart-point-count">0 puntos</span>
-            </div>
-            <div class="chart-controls">
-                <div class="timerange-group">
-                    <button class="trange-btn active" data-ms="10000">10s</button>
-                    <button class="trange-btn" data-ms="60000">1min</button>
-                    <button class="trange-btn" data-ms="300000">5min</button>
-                    <button class="trange-btn" data-ms="3600000">1h</button>
-                    <button class="trange-btn" data-ms="28800000">8h</button>
-                    <button class="trange-btn" data-ms="0">Todo</button>
-                </div>
-            </div>
+            <h2 class="chart-title">CO₂</h2>
         </div>
-        <div id="main-chart" style="width:100%;height:360px;"></div>
+        <div id="chart-co2" style="height:260px;"></div>
     </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header">
+            <h2 class="chart-title">Temperatura & Humedad</h2>
+        </div>
+        <div id="chart-th" style="height:260px;"></div>
+    </div>
+</div>
 
     <div class="table-card">
         <div class="table-card-header">
             <h3 class="table-card-title">Lecturas recientes</h3>
-            <span class="table-card-sub">Últimas 10 entradas en tiempo real</span>
+            <span class="table-card-sub">Últimas 20 entradas en tiempo real</span>
         </div>
         <div class="table-wrapper">
             <table class="data-table">

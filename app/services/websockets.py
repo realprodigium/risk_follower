@@ -44,11 +44,11 @@ async def websocket_sensor_data(websocket: WebSocket):
                 .limit(10)
                 .all()
             )
+            if seed:
+                last_id = seed[0].id
             seed.reverse()
             for rec in seed:
                 await websocket.send_text(_serialize(rec, "historical"))
-                if last_id == 0:
-                    last_id = rec.id
         except Exception as exc:
             logger.error(f"Error sending historical data: {exc}")
             await websocket.send_text(json.dumps({
