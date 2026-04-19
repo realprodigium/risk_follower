@@ -90,7 +90,7 @@ function checkTokenExpiration() {
         const payload = JSON.parse(atob(token.split('.')[1]));
         const timeLeft = payload.exp * 1000 - Date.now();
         if (timeLeft <= 0) { logout(); return; }
-        setTimeout(() => { alert('Tu sesión ha expirado'); logout(); }, timeLeft);
+        setTimeout(() => { alert('Tu sesión ha expirado, vuelve a iniciar sesión'); logout(); }, timeLeft);
     } catch (e) {
         console.error('Token expiration check error:', e);
     }

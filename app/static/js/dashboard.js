@@ -2,20 +2,25 @@ let chartCO2 = null;
 let chartTH = null;
 let websocket = null;
 let wsAttempts = 0;
-let pendingUpdate = false;
+let dbThresholds = null;
 
 const MAX_POINTS = 100;
 
-const THRESHOLDS = {
-    co2: { normal: 1000, warning: 2000, danger: 5000 },
+let THRESHOLDS = {
+    co2:  { normal: 1000, warning: 2000, danger: 5000 },
     temp: { min: 17, max: 27 },
-    hum: { min: 30, max: 60 }
+    hum:  { min: 30, max: 60 }
+};
+
+const CHART_RANGES = {
+    co2:  { min: 200,  max: 6000 },
+    temp: { min: 5,    max: 45   },
+    hum:  { min: 0,    max: 100  }
 };
 
 let historyData = [];
 let selectedHardware = 'all';
 let latestByHardware = {};
-
 let readingsToday = 0;
 let alarmsToday = 0;
 let knownHardware = new Set();
@@ -27,223 +32,224 @@ function cssVar(name) {
 
 function theme() {
     return {
-        text: cssVar('--text-secondary'),
-        grid: cssVar('--border-subtle'),
-        temp: cssVar('--chart-temp'),
-        hum: cssVar('--chart-humidity'),
-        co2: cssVar('--chart-co2')
+        text:     cssVar('--text-secondary'),
+        grid:     cssVar('--border-subtle'),
+        temp:     cssVar('--chart-temp'),
+        hum:      cssVar('--chart-humidity'),
+        co2:      cssVar('--chart-co2')
     };
+}
+
+async function loadSystemThresholds() {
+    try {
+        const token = localStorage.getItem('access_token');
+        const res = await fetch('/admin/thresholds', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const t = await res.json();
+            dbThresholds = t;
+            THRESHOLDS = {
+                co2:  { normal: t.co2_low, warning: t.co2_high, danger: t.co2_high * 1.5 },
+                temp: { min: t.temp_low, max: t.temp_high },
+                hum:  { min: t.humidity_low, max: t.humidity_high }
+            };
+        }
+    } catch (e) {
+        console.error("Failed to load thresholds", e);
+    }
 }
 
 function initCharts() {
     chartCO2 = echarts.init(document.getElementById('chart-co2'));
-    chartTH = echarts.init(document.getElementById('chart-th'));
-    applyOptions();
+    chartTH  = echarts.init(document.getElementById('chart-th'));
+    applyBaseOptions();
     window.addEventListener('resize', () => {
         chartCO2.resize();
         chartTH.resize();
     });
 }
 
-function applyOptions() {
+function makeXAxis(t) {
+    return {
+        type: 'time',
+        splitLine: { show: false },
+        axisLine:  { lineStyle: { color: t.grid } },
+        axisTick:  { show: false },
+        axisLabel: {
+            color: t.text,
+            fontSize: 10,
+            fontFamily: 'JetBrains Mono, monospace',
+            hideOverlap: true,
+            formatter: val => {
+                const d = new Date(val);
+                return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+            }
+        }
+    };
+}
+
+function makeYAxis(t, min, max, unit) {
+    return {
+        min, max,
+        splitNumber: 4,
+        axisLabel: {
+            color: t.text,
+            fontSize: 10,
+            fontFamily: 'JetBrains Mono, monospace',
+            formatter: v => `${v}${unit}`
+        },
+        splitLine: {
+            lineStyle: { color: t.grid, type: 'dashed', opacity: 0.5 }
+        },
+        axisLine: { show: false },
+        axisTick: { show: false }
+    };
+}
+
+function lineSeries(data, color, yAxisIndex = 0, name = '') {
+    return {
+        name,
+        type: 'line',
+        smooth: 0.4,
+        showSymbol: false,
+        data,
+        yAxisIndex,
+        lineStyle: { color, width: 2 },
+        areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: color + '28' },
+                { offset: 1, color: color + '04' }
+            ])
+        }
+    };
+}
+
+function applyBaseOptions() {
     const t = theme();
+    const grid = { left: 44, right: 16, top: 14, bottom: 28 };
+    const anim = {
+        animation: true,
+        animationDuration: 400,
+        animationDurationUpdate: 300
+    };
 
     chartCO2.setOption({
-        animation: true,
-        animationDurationUpdate: 50,
-        animationEasing: 'linear',
-        grid: { left: 40, right: 20, top: 10, bottom: 30 },
-        xAxis: { type: 'time', axisLabel: { color: t.text }, splitLine: { lineStyle: { color: t.grid } } },
-        yAxis: { min: 300, max: 3000, axisLabel: { color: t.text } },
-        series: [{
-            type: 'line',
-            smooth: true,
-            showSymbol: false,
-            data: [],
-            lineStyle: { color: t.co2, width: 2.5 },
-            areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: t.co2 + '33'}, {offset: 1, color: t.co2 + '08'}]) },
-            markArea: {
-                silent: true,
-                itemStyle: { color: t.co2 + '22' },
-                data: [[{ yAxis: 400 }, { yAxis: THRESHOLDS.co2.normal }]]
-            }
-        }]
+        ...anim,
+        grid,
+        xAxis: makeXAxis(t),
+        yAxis: makeYAxis(t, 'dataMin', 'dataMax', ''),
+        series: [lineSeries([], t.co2, 0, 'CO2')],
+        tooltip: { trigger: 'axis' }
     });
 
     chartTH.setOption({
-        animation: true,
-        animationDurationUpdate: 50,
-        animationEasing: 'linear',
-        grid: { left: 40, right: 40, top: 10, bottom: 30 },
-        xAxis: { type: 'time', axisLabel: { color: t.text }, splitLine: { lineStyle: { color: t.grid } } },
+        ...anim,
+        grid: { ...grid, right: 44 },
+        xAxis: makeXAxis(t),
         yAxis: [
-            { min: 10, max: 40, axisLabel: { color: t.text } },
-            { min: 20, max: 80, axisLabel: { color: t.text } }
+            makeYAxis(t, 'dataMin', 'dataMax', '°'),
+            { ...makeYAxis(t, 'dataMin', 'dataMax', '%'), position: 'right' }
         ],
+        legend: {
+            show: true,
+            right: 10, top: 0,
+            textStyle: { color: t.text, fontSize: 10 },
+            data: ['Temp', 'Hum']
+        },
         series: [
-            {
-                type: 'line',
-                smooth: true,
-                showSymbol: false,
-                data: [],
-                yAxisIndex: 0,
-                lineStyle: { color: t.temp, width: 2.5 },
-                areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: t.temp + '33'}, {offset: 1, color: t.temp + '08'}]) },
-                markArea: {
-                    silent: true,
-                    itemStyle: { color: t.temp + '22' },
-                    data: [[{ yAxis: THRESHOLDS.temp.min }, { yAxis: THRESHOLDS.temp.max }]]
-                }
-            },
-            {
-                type: 'line',
-                smooth: true,
-                showSymbol: false,
-                data: [],
-                yAxisIndex: 1,
-                lineStyle: { color: t.hum, width: 2.5 },
-                areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: t.hum + '33'}, {offset: 1, color: t.hum + '08'}]) },
-                markArea: {
-                    silent: true,
-                    itemStyle: { color: t.hum + '22' },
-                    data: [[{ yAxis: THRESHOLDS.hum.min }, { yAxis: THRESHOLDS.hum.max }]]
-                }
-            }
-        ]
+            lineSeries([], t.temp, 0, 'Temp'),
+            lineSeries([], t.hum,  1, 'Hum')
+        ],
+        tooltip: { trigger: 'axis' }
     });
 }
 
 function updateCharts() {
     const filtered = historyData.filter(d => selectedHardware === 'all' || d.hw === selectedHardware);
-    
-    // Si hay demasiados puntos, truncamos para rendimiento
-    const window = filtered.slice(-MAX_POINTS);
+    const win = filtered.slice(-MAX_POINTS);
+    const co2Data  = win.map(d => [d.ts, d.co2]);
+    const tempData = win.map(d => [d.ts, d.temp]);
+    const humData  = win.map(d => [d.ts, d.hum]);
 
-    const co2 = window.map(d => [d.ts, d.co2]);
-    const temp = window.map(d => [d.ts, d.temp]);
-    const hum = window.map(d => [d.ts, d.hum]);
+    chartCO2.setOption({
+        series: [{ data: co2Data }]
+    });
 
-    chartCO2.setOption({ series: [{ data: co2 }] });
-    chartTH.setOption({ series: [{ data: temp }, { data: hum }] });
+    chartTH.setOption({
+        series: [
+            { name: 'Temp', data: tempData },
+            { name: 'Hum',  data: humData  }
+        ]
+    });
 }
 
 function calculateRisk(temp, hum, co2) {
-    // Detectar peligro crítico
     if (co2 > THRESHOLDS.co2.danger) return 'peligro';
-    if (temp < THRESHOLDS.temp.min - 2 || temp > THRESHOLDS.temp.max + 2) return 'peligro';
-    if (hum < THRESHOLDS.hum.min - 10 || hum > THRESHOLDS.hum.max + 10) return 'peligro';
-    
-    // Detectar advertencia
+    if (temp > THRESHOLDS.temp.max + 5 || temp < THRESHOLDS.temp.min - 5) return 'peligro';
+    if (hum > THRESHOLDS.hum.max + 15 || hum < THRESHOLDS.hum.min - 15) return 'peligro';
     if (co2 > THRESHOLDS.co2.warning) return 'advertencia';
-    if (temp < THRESHOLDS.temp.min || temp > THRESHOLDS.temp.max) return 'advertencia';
-    if (hum < THRESHOLDS.hum.min || hum > THRESHOLDS.hum.max) return 'advertencia';
-    
+    if (temp > THRESHOLDS.temp.max || temp < THRESHOLDS.temp.min) return 'advertencia';
+    if (hum  > THRESHOLDS.hum.max  || hum  < THRESHOLDS.hum.min)  return 'advertencia';
     return 'normal';
 }
 
 function normalize(raw) {
-    const ts = typeof raw.timestamp === 'number'
-        ? raw.timestamp
-        : new Date(raw.timestamp).getTime();
-
-    // Asegurar que sean números válidos
+    const ts = typeof raw.timestamp === 'number' ? raw.timestamp : new Date(raw.timestamp).getTime();
     const temp = isNaN(+raw.temperature) ? 0 : +raw.temperature;
-    const hum = isNaN(+raw.humidity) ? 0 : +raw.humidity;
-    const co2 = isNaN(+raw.co2) ? 0 : +raw.co2;
-    const risk = calculateRisk(temp, hum, co2);
-
-    return {
-        ts,
-        temp,
-        hum,
-        co2,
-        hw: raw.hardware || 'default',
-        risk
-    };
+    const hum  = isNaN(+raw.humidity)    ? 0 : +raw.humidity;
+    const co2  = isNaN(+raw.co2)         ? 0 : +raw.co2;
+    return { ts, temp, hum, co2, hw: raw.hardware || 'default', risk: calculateRisk(temp, hum, co2) };
 }
 
 function ingest(p) {
-    // Agregar datos a historial global
     historyData.push(p);
-    
-    // Almacenar último por hardware
     latestByHardware[p.hw] = p;
-
-    // Mantener límite de historial preventivo
-    if (historyData.length > 2000) {
-        historyData.shift();
-    }
-
-    // Agregar hardware tab si es nuevo
+    if (historyData.length > 2000) historyData.shift();
     if (!knownHardware.has(p.hw)) {
         knownHardware.add(p.hw);
         addHardwareTab(p.hw);
     }
-
-    // Actualizar contadores
     readingsToday++;
     if (p.risk !== 'normal') alarmsToday++;
-
-    // Actualizar UI
-    const currentlyViewing = (selectedHardware === 'all' || selectedHardware === p.hw);
-    if (currentlyViewing) {
+    if (selectedHardware === 'all' || selectedHardware === p.hw) {
         updateCards(p);
         updateCharts();
     }
-    
-    // Siempre actualizar tabla
     updateTable(p);
 }
 
 function updateCards(p) {
-    // Actualizar valores numéricos
-    const tempVal = document.getElementById('temp-value');
-    const humVal = document.getElementById('humidity-value');
-    const co2Val = document.getElementById('co2-value');
-    
-    if (tempVal) tempVal.textContent = p.temp.toFixed(1);
-    if (humVal) humVal.textContent = p.hum.toFixed(1);
-    if (co2Val) co2Val.textContent = p.co2.toFixed(0);
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('temp-value',     p.temp.toFixed(1));
+    set('humidity-value', p.hum.toFixed(1));
+    set('co2-value',      p.co2.toFixed(0));
 
-    // Actualizar barras de progreso (visual)
-    const tempBar = document.getElementById('temp-bar');
-    const humBar = document.getElementById('humidity-bar');
-    const co2Bar = document.getElementById('co2-bar');
+    const pct = (v, min, max) => Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100));
+    const tBar = document.getElementById('temp-bar');
+    const hBar = document.getElementById('humidity-bar');
+    const cBar = document.getElementById('co2-bar');
+    if (tBar) tBar.style.width = pct(p.temp, 0, 50) + '%';
+    if (hBar) hBar.style.width = Math.min(100, p.hum) + '%';
+    if (cBar) cBar.style.width = pct(p.co2, 0, 6000) + '%';
 
-    if (tempBar) tempBar.style.width = Math.min(100, (p.temp / 60) * 100) + '%';
-    if (humBar) humBar.style.width = Math.min(100, p.hum) + '%';
-    if (co2Bar) co2Bar.style.width = Math.min(100, (p.co2 / 6000) * 100) + '%';
+    set('status-hardware', p.hw);
+    set('status-count', readingsToday);
+    set('status-alarms', alarmsToday);
+    set('last-update-time', new Date(p.ts).toLocaleTimeString('es-CO', { hour12: false }));
 
-    // Actualizar estado
-    const statusHw = document.getElementById('status-hardware');
-    const statusCnt = document.getElementById('status-count');
-    const statusAlm = document.getElementById('status-alarms');
-    
-    if (statusHw) statusHw.textContent = p.hw;
-    if (statusCnt) statusCnt.textContent = readingsToday;
-    if (statusAlm) statusAlm.textContent = alarmsToday;
-
-    // Actualizar timestamp
-    const lastUpdate = document.getElementById('last-update-time');
-    if (lastUpdate) lastUpdate.textContent = new Date(p.ts).toLocaleTimeString('es-CO', { hour12: false });
-
-    // Actualizar status pill
     const label = document.getElementById('current-status-label');
+    if (label) label.textContent = p.risk.toUpperCase() + (selectedHardware === 'all' ? ` — ${p.hw}` : '');
     const pill = document.getElementById('current-status-pill');
-    const bigBadge = document.getElementById('big-status-badge');
-    const bigText = document.getElementById('big-status-text');
-    
-    const displayRisk = p.risk.toUpperCase() + (selectedHardware === 'all' ? ` — ${p.hw}` : '');
-    if (label) label.textContent = displayRisk;
     if (pill) pill.className = `current-status-pill status-${p.risk}`;
+    const bigBadge = document.getElementById('big-status-badge');
     if (bigBadge) bigBadge.className = `big-status-badge status-${p.risk}`;
-    if (bigText) bigText.textContent = p.risk.toUpperCase();
+    set('big-status-text', p.risk.toUpperCase());
 }
 
 function updateTable(p) {
     recent.unshift(p);
     if (recent.length > 20) recent.pop();
-
     document.getElementById('recent-table-body').innerHTML = recent.map((r, idx) => `
         <tr class="${idx === 0 ? 'new-row' : ''}">
             <td class="ts-cell">${formatTs(r.ts)}</td>
@@ -259,92 +265,59 @@ function updateTable(p) {
 function addHardwareTab(hw) {
     const tabs = document.getElementById('sensor-tabs');
     if (!tabs || tabs.querySelector(`[data-hardware="${hw}"]`)) return;
-
     const btn = document.createElement('button');
     btn.className = 'sensor-tab';
     btn.dataset.hardware = hw;
     btn.textContent = hw;
-
     btn.onclick = () => {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedHardware = hw;
-        
-        // Al cambiar sensor, actualizar cards con la última lectura de ese sensor
-        if (latestByHardware[hw]) {
-            updateCards(latestByHardware[hw]);
-        }
+        if (latestByHardware[hw]) updateCards(latestByHardware[hw]);
         updateCharts();
     };
-
     tabs.appendChild(btn);
 }
 
 function setConnectionStatus(state) {
     const el = document.getElementById('ws-status');
     if (!el) return;
-
     el.className = `connection-pill ${state}`;
-    el.querySelector('span').textContent =
-        state === 'connected' ? 'En vivo' : 'Desconectado';
+    el.querySelector('span').textContent = state === 'connected' ? 'En vivo' : 'Desconectado';
 }
 
 function connectWS() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     websocket = new WebSocket(`${protocol}//${location.host}/ws/sensor-data`);
-
-    websocket.onopen = () => {
-        wsAttempts = 0;
-        setConnectionStatus('connected');
-    };
-
+    websocket.onopen = () => { wsAttempts = 0; setConnectionStatus('connected'); };
     websocket.onclose = () => {
         setConnectionStatus('disconnected');
         const delay = Math.min(3000 * 2 ** wsAttempts, 30000);
         wsAttempts++;
         setTimeout(connectWS, delay);
     };
-
     websocket.onerror = () => setConnectionStatus('disconnected');
-
     websocket.onmessage = e => {
         try {
             const raw = JSON.parse(e.data);
-            if (!raw.timestamp) return;
-            
-            ingest(normalize(raw));
-        } catch (err) {
-            console.error('WebSocket parse error:', err);
-        }
+            if (raw.timestamp) ingest(normalize(raw));
+        } catch (err) {}
     };
-}
-
-function observeTheme() {
-    const observer = new MutationObserver(() => applyOptions());
-    observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ['data-theme']
-    });
 }
 
 function formatTs(ms) {
     return new Date(ms).toLocaleTimeString('es-CO', { hour12: false });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadSystemThresholds();
     initCharts();
     connectWS();
-    observeTheme();
-
     document.getElementById('tab-all')?.addEventListener('click', () => {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-all').classList.add('active');
         selectedHardware = 'all';
-        
-        // Mostrar último dato global disponible
-        if (historyData.length > 0) {
-            updateCards(historyData[historyData.length - 1]);
-        }
+        if (historyData.length > 0) updateCards(historyData[historyData.length - 1]);
         updateCharts();
     });
 });

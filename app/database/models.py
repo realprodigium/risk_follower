@@ -11,7 +11,7 @@ class Records(Base):
     temperature = Column(Float, nullable=False)
     humidity = Column(Float, nullable=False)
     co2 = Column(Float, nullable=False)
-    risk = Column(String(20), nullable=False)#alto | normal | bajo
+    risk = Column(String(20), nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     @staticmethod
