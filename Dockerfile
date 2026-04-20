@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Copy application
 COPY app/ app/
+RUN ls -la app/static/ && ls -la app/templates/
 
 # Run with gunicorn using dynamic PORT
 CMD exec gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 app.main:app
