@@ -2,11 +2,12 @@ import logging
 import contextlib
 import os
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from app.db import Base, engine, SessionLocal
+from app.db import Base, engine, SessionLocal, check_db_connection
 from app.api import auth, routes
 from app.api import admin as admin_api
 from app.database.models import Records
@@ -14,8 +15,10 @@ from app.services.mqtt_client import mqtt_subscriber
 from app.services.websockets import router as ws_router
 from sqlalchemy import text
 
+# Configure logging
+log_level = os.getenv("LOG_LEVEL", "info").upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, log_level),
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[logging.StreamHandler()]
 )
@@ -67,18 +70,38 @@ async def lifespan(app: FastAPI):
 #        ) solo en desarrollo, luego eliminar el bloque
 
     logger.info("Records table truncated.")
-    await mqtt_subscriber.start()
+    
+    # Only start MQTT subscriber if not running as background worker
+    # In Render, MQTT runs as separate background_worker service
+    should_start_mqtt = os.getenv("ENABLE_MQTT", "true").lower() == "true"
+    if should_start_mqtt:
+        try:
+            await mqtt_subscriber.start()
+            logger.info("MQTT Subscriber started successfully")
+        except Exception as e:
+            logger.warning(f"Could not start MQTT subscriber: {e}")
+    else:
+        logger.info("MQTT subscriber disabled for this service")
+    
     yield
 
     logger.info("Application shutting down...")
-    mqtt_subscriber.stop()
+    if should_start_mqtt:
+        mqtt_subscriber.stop()
 
 app = FastAPI(
     title="CO2 Monitoring System",
     description="Sistema de monitoreo de CO2 para cervecerías artesanales",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
+    redoc_url="/redoc" if os.getenv("ENVIRONMENT") != "production" else None,
+    openapi_url="/openapi.json" if os.getenv("ENVIRONMENT") != "production" else None,
 )
 
+# Security middleware
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+
+# CORS Configuration
 cors_origins_env = os.getenv("BACKEND_CORS_ORIGINS", "*")
 origins = [origin.strip() for origin in cors_origins_env.split(",")] if cors_origins_env != "*" else ["*"]
 
@@ -89,6 +112,39 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Health check endpoints
+@app.get("/health", tags=["health"])
+async def health():
+    """Liveness probe - indicates if the service is running"""
+    return {
+        "status": "ok",
+        "environment": os.getenv("ENVIRONMENT", "unknown"),
+        "service": "co2-monitoring-api"
+    }
+
+@app.get("/health/ready", tags=["health"])
+async def health_ready():
+    """Readiness probe - indicates if the service is ready to accept requests"""
+    try:
+        db_connected = check_db_connection()
+        if not db_connected:
+            return JSONResponse(
+                status_code=503,
+                content={"status": "unavailable", "reason": "Database connection failed"}
+            )
+        
+        return {
+            "status": "ready",
+            "database": "connected",
+            "mqtt": "connected" if mqtt_subscriber.client and mqtt_subscriber.client.is_connected() else "disconnected"
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return JSONResponse(
+            status_code=503,
+            content={"status": "unavailable", "reason": str(e)}
+        )
 
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
