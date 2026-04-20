@@ -15,8 +15,5 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 # Copy application
 COPY app/ app/
 
-# Expose port (Render uses 10000)
-EXPOSE 10000
-
-# Run with gunicorn
-CMD ["gunicorn", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:10000", "--timeout", "120", "app.main:app"]
+# Run with gunicorn using dynamic PORT
+CMD exec gunicorn -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT --timeout 120 app.main:app
