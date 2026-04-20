@@ -46,5 +46,6 @@ typing-inspection==0.4.2
 typing_extensions==4.15.0
 tzdata==2025.2
 uvicorn==0.27.0
+gunicorn==21.2.0
 watchfiles==1.1.1
 websockets==12.0

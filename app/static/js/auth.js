@@ -96,3 +96,16 @@ function checkTokenExpiration() {
     }
 }
 document.addEventListener('DOMContentLoaded', checkTokenExpiration);
+
+document.addEventListener('DOMContentLoaded', () => {
+    const menuToggle = document.getElementById('menu-toggle');
+    const navContainer = document.getElementById('nav-container');
+    if (menuToggle && navContainer) {
+        menuToggle.addEventListener('click', () => {
+            navContainer.classList.toggle('open');
+        });
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => navContainer.classList.remove('open'));
+        });
+    }
+});
