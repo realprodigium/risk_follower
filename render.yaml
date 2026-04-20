@@ -4,9 +4,6 @@ services:
     runtime: docker
     region: oregon
     plan: free
-    scaling:
-      minInstances: 1
-      maxInstances: 1
     envVars:
       - key: PORT
         value: 10000
@@ -15,7 +12,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: ENABLE_MQTT
-        value: false
+        value: "false"
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -48,8 +45,6 @@ services:
         value: production
       - key: LOG_LEVEL
         value: info
-      - key: ENABLE_MQTT
-        value: "true"
       - key: DATABASE_URL
         sync: false
       - key: MQTT_BROKER
