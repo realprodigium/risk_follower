@@ -12,7 +12,6 @@ RUN pip install --no-cache-dir -r requirements.txt gunicorn
 
 # Copy application
 COPY app/ app/
-COPY restore_schema.sql .
 
 # Expose port (Render uses 10000)
 EXPOSE 10000
