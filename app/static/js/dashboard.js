@@ -4,12 +4,13 @@ let websocket = null;
 let wsAttempts = 0;
 let dbThresholds = null;
 
-const MAX_POINTS = 100;
+const MAX_POINTS = 5;  // Mostrar últimos 5 valores en el eje X
 
 let THRESHOLDS = {
-    co2:  { normal: 1000, warning: 2000, danger: 5000 },
-    temp: { min: 17, max: 27 },
-    hum:  { min: 30, max: 60 }
+    // Rango normal
+    co2:  { low: 400, high: 1000, warning: 1500 },
+    temp: { low: 15, high: 30, warning: 35 },
+    hum:  { low: 30, high: 60, warning: 70 }
 };
 
 const CHART_RANGES = {
@@ -49,11 +50,25 @@ async function loadSystemThresholds() {
         if (res.ok) {
             const t = await res.json();
             dbThresholds = t;
+            // Cargar umbrales dinámicamente del backend con defaults por compatibilidad
             THRESHOLDS = {
-                co2:  { normal: t.co2_low, warning: t.co2_high, danger: t.co2_high * 1.5 },
-                temp: { min: t.temp_low, max: t.temp_high },
-                hum:  { min: t.humidity_low, max: t.humidity_high }
+                co2:  { 
+                    low: t.co2_low ?? 400, 
+                    high: t.co2_high ?? 1000, 
+                    warning: t.co2_warning ?? 1500 
+                },
+                temp: { 
+                    low: t.temp_low ?? 15, 
+                    high: t.temp_high ?? 30, 
+                    warning: t.temp_warning ?? 35 
+                },
+                hum:  { 
+                    low: t.humidity_low ?? 30, 
+                    high: t.humidity_high ?? 60, 
+                    warning: t.humidity_warning ?? 70 
+                }
             };
+            console.log('Thresholds loaded:', THRESHOLDS);
         }
     } catch (e) {
         console.error("Failed to load thresholds", e);
@@ -138,9 +153,19 @@ function applyBaseOptions() {
         ...anim,
         grid,
         xAxis: makeXAxis(t),
-        yAxis: makeYAxis(t, 'dataMin', 'dataMax', ''),
+        // Eje Y dinámico para CO2: usa dataMin/dataMax pero con rango mínimo de 400-1500
+        yAxis: makeYAxis(t, 400, 1500, ' ppm'),
         series: [lineSeries([], t.co2, 0, 'CO2')],
-        tooltip: { trigger: 'axis' }
+        tooltip: { 
+            trigger: 'axis',
+            formatter: params => {
+                if (!params.length) return '';
+                const p = params[0];
+                const date = new Date(p.value[0]);
+                const time = date.toLocaleTimeString('es-CO', { hour12: false });
+                return `${time}<br/>CO2: ${p.value[1].toFixed(0)} ppm`;
+            }
+        }
     });
 
     chartTH.setOption({
@@ -148,8 +173,8 @@ function applyBaseOptions() {
         grid: { ...grid, right: 44 },
         xAxis: makeXAxis(t),
         yAxis: [
-            makeYAxis(t, 'dataMin', 'dataMax', '°'),
-            { ...makeYAxis(t, 'dataMin', 'dataMax', '%'), position: 'right' }
+            makeYAxis(t, 0, 50, '°'),
+            { ...makeYAxis(t, 0, 100, '%'), position: 'right' }
         ],
         legend: {
             show: true,
@@ -161,7 +186,21 @@ function applyBaseOptions() {
             lineSeries([], t.temp, 0, 'Temp'),
             lineSeries([], t.hum,  1, 'Hum')
         ],
-        tooltip: { trigger: 'axis' }
+        tooltip: { 
+            trigger: 'axis',
+            formatter: params => {
+                if (!params.length) return '';
+                const date = new Date(params[0].value[0]);
+                const time = date.toLocaleTimeString('es-CO', { hour12: false });
+                let content = `${time}<br/>`;
+                params.forEach(p => {
+                    const val = p.value[1].toFixed(1);
+                    const unit = p.axisIndex === 1 ? '%' : '°';
+                    content += `${p.name}: ${val}${unit}<br/>`;
+                });
+                return content;
+            }
+        }
     });
 }
 
@@ -172,7 +211,25 @@ function updateCharts() {
     const tempData = win.map(d => [d.ts, d.temp]);
     const humData  = win.map(d => [d.ts, d.hum]);
 
+    // Calcular rango dinámico para CO2
+    let co2Min = 400, co2Max = 1500;
+    if (co2Data.length > 0) {
+        const co2Values = co2Data.map(d => d[1]);
+        const minVal = Math.min(...co2Values);
+        const maxVal = Math.max(...co2Values);
+        
+        // Expandir el rango dinámicamente
+        co2Min = Math.floor(Math.min(minVal, 400) / 100) * 100;
+        co2Max = Math.ceil(Math.max(maxVal, 1000) / 100) * 100;
+        
+        // Asegurar un margen mínimo
+        const margin = (co2Max - co2Min) * 0.1 || 100;
+        co2Min -= margin;
+        co2Max += margin;
+    }
+
     chartCO2.setOption({
+        yAxis: { min: Math.max(0, co2Min), max: co2Max },
         series: [{ data: co2Data }]
     });
 
@@ -185,12 +242,19 @@ function updateCharts() {
 }
 
 function calculateRisk(temp, hum, co2) {
-    if (co2 > THRESHOLDS.co2.danger) return 'peligro';
-    if (temp > THRESHOLDS.temp.max + 5 || temp < THRESHOLDS.temp.min - 5) return 'peligro';
-    if (hum > THRESHOLDS.hum.max + 15 || hum < THRESHOLDS.hum.min - 15) return 'peligro';
-    if (co2 > THRESHOLDS.co2.warning) return 'advertencia';
-    if (temp > THRESHOLDS.temp.max || temp < THRESHOLDS.temp.min) return 'advertencia';
-    if (hum  > THRESHOLDS.hum.max  || hum  < THRESHOLDS.hum.min)  return 'advertencia';
+    // PELIGRO: Valores críticos
+    // CO2 > 1500 ppm, Temp >35°C o <15°C, Humedad >70% o <30%
+    if (co2 > THRESHOLDS.co2.warning || temp > THRESHOLDS.temp.warning || temp < THRESHOLDS.temp.low || hum > THRESHOLDS.hum.warning || hum < THRESHOLDS.hum.low) {
+        return 'peligro';
+    }
+    
+    // ADVERTENCIA: Valores en zonas de precaución
+    // CO2 1000-1500, Temp 30-35°C, Humedad 60-70%
+    if (co2 > THRESHOLDS.co2.high || (temp > THRESHOLDS.temp.high && temp <= THRESHOLDS.temp.warning) || hum > THRESHOLDS.hum.high) {
+        return 'advertencia';
+    }
+    
+    // NORMAL: Valores dentro de rangos recomendados
     return 'normal';
 }
 
@@ -225,13 +289,20 @@ function updateCards(p) {
     set('humidity-value', p.hum.toFixed(1));
     set('co2-value',      p.co2.toFixed(0));
 
-    const pct = (v, min, max) => Math.min(100, Math.max(0, ((v - min) / (max - min)) * 100));
+    // Calcular porcentaje para las barras usando rangos dinámicos
     const tBar = document.getElementById('temp-bar');
     const hBar = document.getElementById('humidity-bar');
     const cBar = document.getElementById('co2-bar');
-    if (tBar) tBar.style.width = pct(p.temp, 0, 50) + '%';
+    
+    // Barra de temperatura: 5 a 45°C (rango visual)
+    if (tBar) tBar.style.width = Math.min(100, Math.max(0, ((p.temp - 5) / 40) * 100)) + '%';
+    
+    // Barra de humedad: 0 a 100%
     if (hBar) hBar.style.width = Math.min(100, p.hum) + '%';
-    if (cBar) cBar.style.width = pct(p.co2, 0, 6000) + '%';
+    
+    // Barra de CO2: dinámico basado en valor máximo reciente + margen
+    // Usar rango de 0 a 2000 ppm para visualización
+    if (cBar) cBar.style.width = Math.min(100, Math.max(0, (p.co2 / 2000) * 100)) + '%';
 
     set('status-hardware', p.hw);
     set('status-count', readingsToday);

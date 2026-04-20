@@ -23,9 +23,43 @@ logger = logging.getLogger(__name__)
 
 Base.metadata.create_all(bind=engine)
 
+def _ensure_alert_thresholds_columns():
+    """Asegurar que existan las nuevas columnas en alert_thresholds"""
+    try:
+        with engine.begin() as conn:
+            # Verificar y agregar columnas si no existen (compatibilidad con BD existentes)
+            columns_to_add = [
+                ("co2_warning", "FLOAT DEFAULT 1500.0"),
+                ("temp_warning", "FLOAT DEFAULT 35.0"),
+                ("humidity_warning", "FLOAT DEFAULT 70.0"),
+            ]
+            
+            for col_name, col_def in columns_to_add:
+                try:
+                    # Intentar crear la columna
+                    conn.execute(text(f"ALTER TABLE alert_thresholds ADD COLUMN {col_name} {col_def}"))
+                    logger.info(f"Columna {col_name} agregada a alert_thresholds")
+                except Exception as e:
+                    # La columna probablemente ya existe
+                    if "already exists" not in str(e).lower() and "duplicate" not in str(e).lower():
+                        logger.debug(f"Columna {col_name} ya existe o error: {e}")
+            
+            # Asegurar que temp_high sea 30 en lugar de 35
+            try:
+                conn.execute(text("""
+                    UPDATE alert_thresholds 
+                    SET temp_high = 30.0, humidity_high = 60.0 
+                    WHERE temp_high != 30.0 OR humidity_high != 60.0
+                """))
+            except Exception as e:
+                logger.debug(f"No se pudieron actualizar valores por defecto: {e}")
+    except Exception as e:
+        logger.error(f"Error asegurando columnas de alert_thresholds: {e}")
+
 @contextlib.asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Application starting up...")
+    _ensure_alert_thresholds_columns()
     
 #   with engine.begin() as conn:
 #       conn.execute(

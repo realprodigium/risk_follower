@@ -194,12 +194,18 @@ async function loadThresholds() {
     if (!res || !res.ok) return;
     const t = await res.json();
 
-    document.getElementById('th-co2-high').value = t.co2_high;
+    // Rango normal
     document.getElementById('th-co2-low').value = t.co2_low;
-    document.getElementById('th-temp-high').value = t.temp_high;
+    document.getElementById('th-co2-high').value = t.co2_high;
     document.getElementById('th-temp-low').value = t.temp_low;
-    document.getElementById('th-hum-high').value = t.humidity_high;
+    document.getElementById('th-temp-high').value = t.temp_high;
     document.getElementById('th-hum-low').value = t.humidity_low;
+    document.getElementById('th-hum-high').value = t.humidity_high;
+    
+    // Límites de advertencia (con fallback por compatibilidad)
+    if (t.co2_warning) document.getElementById('th-co2-warning').value = t.co2_warning;
+    if (t.temp_warning) document.getElementById('th-temp-warning').value = t.temp_warning;
+    if (t.humidity_warning) document.getElementById('th-hum-warning').value = t.humidity_warning;
 
     if (t.updated_by) {
         document.getElementById('thresholds-updated').textContent =`Actualizado por ${t.updated_by} · ${formatDate(t.updated_at)}`;
@@ -215,12 +221,15 @@ async function saveThresholds() {
     errEl.classList.add('hidden');
 
     const body = {
-        co2_high: parseFloat(document.getElementById('th-co2-high').value),
         co2_low: parseFloat(document.getElementById('th-co2-low').value),
-        temp_high: parseFloat(document.getElementById('th-temp-high').value),
+        co2_high: parseFloat(document.getElementById('th-co2-high').value),
         temp_low: parseFloat(document.getElementById('th-temp-low').value),
-        humidity_high: parseFloat(document.getElementById('th-hum-high').value),
+        temp_high: parseFloat(document.getElementById('th-temp-high').value),
         humidity_low: parseFloat(document.getElementById('th-hum-low').value),
+        humidity_high: parseFloat(document.getElementById('th-hum-high').value),
+        co2_warning: parseFloat(document.getElementById('th-co2-warning').value),
+        temp_warning: parseFloat(document.getElementById('th-temp-warning').value),
+        humidity_warning: parseFloat(document.getElementById('th-hum-warning').value),
     };
 
     if (Object.values(body).some(isNaN)) {

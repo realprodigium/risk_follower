@@ -37,12 +37,19 @@ class AlertThresholds(Base):
     __tablename__ = 'alert_thresholds'
 
     id = Column(Integer, primary_key=True)
+    # Rango normal: CO2 400-1000 ppm
+    co2_low = Column(Float, default=400.0, nullable=False)
     co2_high = Column(Float, default=1000.0, nullable=False)
-    co2_low = Column(Float, default=400.0,  nullable=False)
-    temp_high = Column(Float, default=35.0,   nullable=False)
-    temp_low = Column(Float, default=15.0,   nullable=False)
-    humidity_high = Column(Float, default=80.0,   nullable=False)
-    humidity_low = Column(Float, default=30.0,   nullable=False)
+    # Rango normal: Temperatura 15-30°C
+    temp_low = Column(Float, default=15.0, nullable=False)
+    temp_high = Column(Float, default=30.0, nullable=False)
+    # Rango normal: Humedad 30-60%
+    humidity_low = Column(Float, default=30.0, nullable=False)
+    humidity_high = Column(Float, default=60.0, nullable=False)
+    # Límites de advertencia
+    co2_warning = Column(Float, default=1500.0, nullable=False)
+    temp_warning = Column(Float, default=35.0, nullable=False)
+    humidity_warning = Column(Float, default=70.0, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_by = Column(String(50), nullable=True)
 

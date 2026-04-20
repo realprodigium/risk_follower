@@ -46,12 +46,17 @@ class TokenData(BaseModel):
     role: Optional[str] = None
 
 class AlertThresholdsSchema(BaseModel):
+    # Rango normal
+    co2_low: float = Field(default=400.0, gt=0)
     co2_high: float = Field(default=1000.0, gt=0)
-    co2_low: float = Field(default=400.0,  gt=0)
-    temp_high: float = Field(default=35.0)
     temp_low: float = Field(default=15.0)
-    humidity_high: float = Field(default=80.0,   ge=0, le=100)
-    humidity_low: float = Field(default=30.0,   ge=0, le=100)
+    temp_high: float = Field(default=30.0)
+    humidity_low: float = Field(default=30.0, ge=0, le=100)
+    humidity_high: float = Field(default=60.0, ge=0, le=100)
+    # Límites de advertencia
+    co2_warning: float = Field(default=1500.0, gt=0)
+    temp_warning: float = Field(default=35.0)
+    humidity_warning: float = Field(default=70.0, ge=0, le=100)
 
 class AlertThresholdsResponse(AlertThresholdsSchema):
     id: int

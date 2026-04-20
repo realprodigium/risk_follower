@@ -176,12 +176,16 @@
                     <div class="threshold-group-label"><span class="tg-dot tg-dot--green"></span>CO2 (PPM)</div>
                     <div class="threshold-row">
                         <div class="form-group">
-                            <label class="form-label">Umbral alto ↑</label>
+                            <label class="form-label">Rango normal bajo ↓</label>
+                            <input type="number" class="form-input" id="th-co2-low" placeholder="400" step="10">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Rango normal alto ↑</label>
                             <input type="number" class="form-input" id="th-co2-high" placeholder="1000" step="10">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Umbral bajo ↓</label>
-                            <input type="number" class="form-input" id="th-co2-low" placeholder="400" step="10">
+                            <label class="form-label">Límite advertencia ⚠️</label>
+                            <input type="number" class="form-input" id="th-co2-warning" placeholder="1500" step="10">
                         </div>
                     </div>
                 </div>
@@ -189,12 +193,16 @@
                     <div class="threshold-group-label"><span class="tg-dot tg-dot--red"></span>Temperatura (°C)</div>
                     <div class="threshold-row">
                         <div class="form-group">
-                            <label class="form-label">Umbral alto ↑</label>
-                            <input type="number" class="form-input" id="th-temp-high" placeholder="35" step="0.5">
+                            <label class="form-label">Rango normal bajo ↓</label>
+                            <input type="number" class="form-input" id="th-temp-low" placeholder="15" step="0.5">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Umbral bajo ↓</label>
-                            <input type="number" class="form-input" id="th-temp-low" placeholder="15" step="0.5">
+                            <label class="form-label">Rango normal alto ↑</label>
+                            <input type="number" class="form-input" id="th-temp-high" placeholder="30" step="0.5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Límite advertencia ⚠️</label>
+                            <input type="number" class="form-input" id="th-temp-warning" placeholder="35" step="0.5">
                         </div>
                     </div>
                 </div>
@@ -202,12 +210,16 @@
                     <div class="threshold-group-label"><span class="tg-dot tg-dot--blue"></span>Humedad (%)</div>
                     <div class="threshold-row">
                         <div class="form-group">
-                            <label class="form-label">Umbral alto ↑</label>
-                            <input type="number" class="form-input" id="th-hum-high" placeholder="80" step="1" min="0" max="100">
+                            <label class="form-label">Rango normal bajo ↓</label>
+                            <input type="number" class="form-input" id="th-hum-low" placeholder="30" step="1" min="0" max="100">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Umbral bajo ↓</label>
-                            <input type="number" class="form-input" id="th-hum-low" placeholder="30" step="1" min="0" max="100">
+                            <label class="form-label">Rango normal alto ↑</label>
+                            <input type="number" class="form-input" id="th-hum-high" placeholder="60" step="1" min="0" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Límite advertencia ⚠️</label>
+                            <input type="number" class="form-input" id="th-hum-warning" placeholder="70" step="1" min="0" max="100">
                         </div>
                     </div>
                 </div>
