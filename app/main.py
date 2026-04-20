@@ -27,10 +27,8 @@ logger = logging.getLogger(__name__)
 Base.metadata.create_all(bind=engine)
 
 def _ensure_alert_thresholds_columns():
-    """Asegurar que existan las nuevas columnas en alert_thresholds"""
     try:
         with engine.begin() as conn:
-            # Verificar y agregar columnas si no existen (compatibilidad con BD existentes)
             columns_to_add = [
                 ("co2_warning", "FLOAT DEFAULT 1500.0"),
                 ("temp_warning", "FLOAT DEFAULT 35.0"),
@@ -39,15 +37,12 @@ def _ensure_alert_thresholds_columns():
             
             for col_name, col_def in columns_to_add:
                 try:
-                    # Intentar crear la columna
                     conn.execute(text(f"ALTER TABLE alert_thresholds ADD COLUMN {col_name} {col_def}"))
                     logger.info(f"Columna {col_name} agregada a alert_thresholds")
                 except Exception as e:
-                    # La columna probablemente ya existe
                     if "already exists" not in str(e).lower() and "duplicate" not in str(e).lower():
                         logger.debug(f"Columna {col_name} ya existe o error: {e}")
             
-            # Asegurar que temp_high sea 30 en lugar de 35
             try:
                 conn.execute(text("""
                     UPDATE alert_thresholds 
@@ -69,10 +64,7 @@ async def lifespan(app: FastAPI):
 #           text("TRUNCATE TABLE records RESTART IDENTITY CASCADE;")
 #        ) solo en desarrollo, luego eliminar el bloque
 
-    logger.info("Records table truncated.")
     
-    # Only start MQTT subscriber if not running as background worker
-    # In Render, MQTT runs as separate background_worker service
     should_start_mqtt = os.getenv("ENABLE_MQTT", "true").lower() == "true"
     if should_start_mqtt:
         try:
@@ -98,10 +90,8 @@ app = FastAPI(
     openapi_url="/openapi.json" if os.getenv("ENVIRONMENT") != "production" else None,
 )
 
-# Security middleware
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
 
-# CORS Configuration
 cors_origins_env = os.getenv("BACKEND_CORS_ORIGINS", "*")
 origins = [origin.strip() for origin in cors_origins_env.split(",")] if cors_origins_env != "*" else ["*"]
 
@@ -113,10 +103,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Health check endpoints
 @app.get("/health", tags=["health"])
 async def health():
-    """Liveness probe - indicates if the service is running"""
     return {
         "status": "ok",
         "environment": os.getenv("ENVIRONMENT", "unknown"),

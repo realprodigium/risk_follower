@@ -76,6 +76,22 @@ def update_user(
            f"Updated '{user.username}': {', '.join(changes) or 'no changes'}")
     return user
 
+@router.delete("/users/{user_id}", status_code=204)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    admin: AdminUser = None
+):
+    user = db.query(models.Users).filter(models.Users.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.id == admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    username = user.username
+    db.delete(user)
+    db.commit()
+    _audit(db, admin.username, "DELETE_USER", f"Deleted '{username}'")
+    
 @router.get("/thresholds", response_model=schemas.AlertThresholdsResponse)
 def get_thresholds(
     db: Session = Depends(get_db),
