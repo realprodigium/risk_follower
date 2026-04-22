@@ -2,7 +2,7 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timezone
-from aiomqtt import Client
+from aiomqtt import Client, client, topic
 from app.db import SessionLocal
 from app.database.models import Records
 import os
@@ -118,8 +118,11 @@ class MQTTSubscriber:
                 async with Client(MQTT_BROKER, MQTT_PORT, **auth_kwargs, tls_context=tls_context) as client:
                     self.connected = True
                     logger.info(f"Connected to MQTT broker")
-                    await client.subscribe(f"{MQTT_TOPIC}/#")
-                    logger.info(f'Subscribed to topic: {MQTT_TOPIC}/#')
+                    topic = MQTT_TOPIC.rstrip('/')
+                    if '+' not in topic and '#' not in topic:
+                        topic = f"{topic}/#"
+                    await client.subscribe(topic)
+                    logger.info(f'Subscribed to topic: {topic}')
                     async for message in client.messages:
                         if not self.is_running: break
                         try:
