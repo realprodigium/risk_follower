@@ -2,7 +2,7 @@ import logging
 import contextlib
 import os
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.templating import Jinja2Templates
@@ -111,9 +111,12 @@ async def health():
         "service": "co2-monitoring-api"
     }
 
+@app.head("/health", tags=["health"])
+async def health_head():
+    return Response(status_code=200)
+
 @app.get("/health/ready", tags=["health"])
 async def health_ready():
-    """Readiness probe - indicates if the service is ready to accept requests"""
     try:
         db_connected = check_db_connection()
         if not db_connected:
@@ -157,7 +160,3 @@ async def history_page(request: Request):
 @app.get("/admin", response_class=HTMLResponse, tags=['view'])
 async def admin_page(request: Request):
     return templates.TemplateResponse(request=request, name='admin.html', context={})
-
-@app.get('/health', tags=['system'])
-def health_check():
-    return {"status": "ok", "service": "CO2 Monitor"}
