@@ -65,17 +65,14 @@ class MQTTSubscriber:
         if not t:
             return 'normal'
         
-        # PELIGRO: Valores fuera de límites críticos
         # CO2 > 1500 ppm, Temp >35°C o <15°C, Humedad >70% o <30%
         if co2 > t.co2_warning or temp > t.temp_warning or temp < t.temp_low or hum > t.humidity_warning or hum < t.humidity_low:
             return 'peligro'
         
-        # ADVERTENCIA: Valores en zonas de precaución
         # CO2 1000-1500, Temp 30-35°C, Humedad 60-70%
         if co2 > t.co2_high or (temp > t.temp_high and temp <= t.temp_warning) or hum > t.humidity_high:
             return 'advertencia'
         
-        # NORMAL: Valores dentro de rangos recomendados
         return 'normal'
 
     async def _save_record(self, validated_payload: dict) -> Records | None:

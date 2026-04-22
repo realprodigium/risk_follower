@@ -12,7 +12,7 @@ services:
       - key: LOG_LEVEL
         value: info
       - key: ENABLE_MQTT
-        value: "false"
+        value: "true"
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
@@ -34,28 +34,28 @@ services:
       - key: MQTT_TLS_ENABLED
         value: "true"
 
-  - type: worker
-    name: co2-mqtt-worker
-    runtime: docker
-    region: oregon
-    plan: free
-    dockerCommand: python -m app.services.mqtt_worker
-    envVars:
-      - key: ENVIRONMENT
-        value: production
-      - key: LOG_LEVEL
-        value: info
-      - key: DATABASE_URL
-        sync: false
-      - key: MQTT_BROKER
-        sync: false
-      - key: MQTT_PORT
-        sync: false
-      - key: MQTT_TOPIC
-        sync: false
-      - key: MQTT_USER
-        sync: false
-      - key: MQTT_PASSWORD
-        sync: false
-      - key: MQTT_TLS_ENABLED
-        value: "true"
+  #- type: worker
+   # name: co2-mqtt-worker
+    #runtime: docker
+    #region: oregon
+    #plan: free
+    #dockerCommand: python -m app.services.mqtt_worker
+    #envVars:
+      #- key: ENVIRONMENT
+        #value: production
+      #- key: LOG_LEVEL
+        #value: info
+      #- key: DATABASE_URL
+        #sync: false
+      #- key: MQTT_BROKER
+        #sync: false
+      #- key: MQTT_PORT
+        #sync: false
+      #- key: MQTT_TOPIC
+        #sync: false
+      #- key: MQTT_USER
+        #sync: false
+      #- key: MQTT_PASSWORD
+        #sync: false
+      #- key: MQTT_TLS_ENABLED
+        #value: "true"
