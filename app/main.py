@@ -125,7 +125,7 @@ async def health_ready():
         return {
             "status": "ready",
             "database": "connected",
-            "mqtt": "connected" if mqtt_subscriber.client and mqtt_subscriber.client.is_connected() else "disconnected"
+            "mqtt": "connected" if mqtt_subscriber.connected else "disconnected"
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")

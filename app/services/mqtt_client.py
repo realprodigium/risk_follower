@@ -58,6 +58,7 @@ class MQTTSubscriber:
     def __init__(self):
         self.is_running = False
         self.task = None
+        self.isconnected = False
 
     def _calculate_risk(self, db, temp, hum, co2):
         from app.database import models
@@ -115,14 +116,19 @@ class MQTTSubscriber:
                 tls_context = None
                 if MQTT_TLS_ENABLED: tls_context = ssl.create_default_context()
                 async with Client(MQTT_BROKER, MQTT_PORT, **auth_kwargs, tls_context=tls_context) as client:
+                    self.connected = True
+                    logger.info(f"Connected to MQTT broker")
                     await client.subscribe(f"{MQTT_TOPIC}/#")
+                    logger.info(f'Subscribed to topic: {MQTT_TOPIC}/#')
                     async for message in client.messages:
                         if not self.is_running: break
                         try:
                             payload = json.loads(message.payload.decode())
                             await self.process_message(payload)
-                        except Exception: pass
-            except Exception:
+                        except Exception as e: logger.error(f'Message processing error: {e}')
+            except Exception as e:
+                self.connected = False
+                logger.warning(f'MQTT connection error: {e}. Retrying in {retry_delay} seconds...')
                 await asyncio.sleep(retry_delay)
 
     def stop(self):
