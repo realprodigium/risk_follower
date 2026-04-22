@@ -46,8 +46,10 @@ def _ensure_alert_thresholds_columns():
             try:
                 conn.execute(text("""
                     UPDATE alert_thresholds 
-                    SET temp_high = 30.0, humidity_high = 60.0 
-                    WHERE temp_high != 30.0 OR humidity_high != 60.0
+                    SET temp_low=10.0, temp_high=35.0, temp_warning=40.0,
+                        humidity_low=40.0, humidity_high=90.0, humidity_warning=95.0,
+                        co2_low=300.0, co2_high=1000.0, co2_warning=1500.0
+                    WHERE id = 1
                 """))
             except Exception as e:
                 logger.debug(f"No se pudieron actualizar valores por defecto: {e}")
