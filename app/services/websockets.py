@@ -9,7 +9,7 @@ from datetime import timezone
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-POLL_INTERVAL = 1.0
+POLL_INTERVAL = 0.5
 
 def _serialize(record, msg_type: str) -> str:
     ts = record.timestamp
