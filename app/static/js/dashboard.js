@@ -145,7 +145,7 @@ function makeXAxis(t) {
             hideOverlap: true,
             formatter: val => {
                 const d = new Date(val);
-                return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
+                return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
             }
         }
     };
@@ -208,9 +208,9 @@ function applyBaseOptions() {
                 if (!params.length) return '';
                 const p = params[0];
                 const date = new Date(p.value[0]);
-                const h = String(date.getUTCHours()).padStart(2, '0');
-                const m = String(date.getUTCMinutes()).padStart(2, '0');
-                return `${h}:${m} UTC<br/>CO2: ${p.value[1].toFixed(0)} ppm`;
+                const h = String(date.getHours()).padStart(2, '0');
+                const m = String(date.getMinutes()).padStart(2, '0');
+                return `${h}:${m}<br/>CO2: ${p.value[1].toFixed(0)} ppm`;
             }
         }
     });
@@ -238,9 +238,9 @@ function applyBaseOptions() {
             formatter: params => {
                 if (!params.length) return '';
                 const date = new Date(params[0].value[0]);
-                const h = String(date.getUTCHours()).padStart(2, '0');
-                const m = String(date.getUTCMinutes()).padStart(2, '0');
-                let content = `${h}:${m} UTC<br/>`;
+                const h = String(date.getHours()).padStart(2, '0');
+                const m = String(date.getMinutes()).padStart(2, '0');
+                let content = `${h}:${m}<br/>`;
                 params.forEach(p => {
                     const val = p.value[1].toFixed(1);
                     const unit = p.axisIndex === 1 ? '%' : '°';
@@ -350,10 +350,10 @@ function updateCards(p) {
     set('status-count', readingsToday);
     set('status-alarms', alarmsToday);
     const lastDate = new Date(p.ts);
-    const lh = String(lastDate.getUTCHours()).padStart(2, '0');
-    const lm = String(lastDate.getUTCMinutes()).padStart(2, '0');
-    const ls = String(lastDate.getUTCSeconds()).padStart(2, '0');
-    set('last-update-time', `${lh}:${lm}:${ls} UTC`);
+    const lh = String(lastDate.getHours()).padStart(2, '0');
+    const lm = String(lastDate.getMinutes()).padStart(2, '0');
+    const ls = String(lastDate.getSeconds()).padStart(2, '0');
+    set('last-update-time', `${lh}:${lm}:${ls}`);
 
     const label = document.getElementById('current-status-label');
     if (label) label.textContent = p.risk.toUpperCase() + (selectedHardware === 'all' ? ` — ${p.hw}` : '');
@@ -454,10 +454,10 @@ function connectWS() {
 
 function formatTs(ms) {
     const d = new Date(ms);
-    const h = String(d.getUTCHours()).padStart(2, '0');
-    const m = String(d.getUTCMinutes()).padStart(2, '0');
-    const s = String(d.getUTCSeconds()).padStart(2, '0');
-    return `${h}:${m}:${s} UTC`;
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    const s = String(d.getSeconds()).padStart(2, '0');
+    return `${h}:${m}:${s}`;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
