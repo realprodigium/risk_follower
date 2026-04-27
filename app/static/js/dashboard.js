@@ -4,10 +4,9 @@ let websocket = null;
 let wsAttempts = 0;
 let dbThresholds = null;
 
-const MAX_POINTS = 5;  // Mostrar últimos 5 valores en el eje X
+const MAX_POINTS = 5;
 
 let THRESHOLDS = {
-    // Rango normal
     co2:  { low: 400, high: 1000, warning: 1500 },
     temp: { low: 15, high: 30, warning: 35 },
     hum:  { low: 30, high: 60, warning: 70 }
@@ -50,7 +49,6 @@ async function loadSystemThresholds() {
         if (res.ok) {
             const t = await res.json();
             dbThresholds = t;
-            // Cargar umbrales dinámicamente del backend con defaults por compatibilidad
             THRESHOLDS = {
                 co2:  { 
                     low: t.co2_low ?? 400, 
@@ -72,6 +70,55 @@ async function loadSystemThresholds() {
         }
     } catch (e) {
         console.error("Failed to load thresholds", e);
+    }
+}
+
+async function loadMetrics8h() {
+    try {
+        const token = localStorage.getItem('access_token');
+        const hw = selectedHardware === 'all' ? '' : `?hardware=${selectedHardware}`;
+        const res = await fetch(`/records/metrics/8h${hw}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const metrics = await res.json();
+            updateMetricsUI(metrics);
+        }
+    } catch (e) {
+        console.error("Failed to load 8h metrics", e);
+    }
+}
+
+function updateMetricsUI(m) {
+    const set = (id, val, def='--') => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val !== null && val !== undefined ? val : def;
+    };
+    
+    set('m8h-co2-max', m.co2.max);
+    set('m8h-co2-min', m.co2.min);
+    set('m8h-co2-avg', m.co2.avg);
+    set('m8h-co2-vol', m.co2.volatility);
+    
+    set('m8h-temp-max', m.temperature.max);
+    set('m8h-temp-min', m.temperature.min);
+    set('m8h-temp-avg', m.temperature.avg);
+    set('m8h-temp-vol', m.temperature.volatility);
+    
+    set('m8h-hum-max', m.humidity.max);
+    set('m8h-hum-min', m.humidity.min);
+    set('m8h-hum-avg', m.humidity.avg);
+    set('m8h-hum-vol', m.humidity.volatility);
+    
+    set('m8h-risk-events', m.risk_events);
+    set('m8h-warn-events', m.warning_events);
+    set('m8h-records', m.records_in_period);
+    
+    const qual = document.getElementById('metrics-quality');
+    if (qual) {
+        const qText = m.data_quality === 'optima' ? '✓ Óptima' : 
+                      m.data_quality === 'buena' ? '≈ Buena' : '⚠ Limitada';
+        qual.textContent = `Calidad: ${qText}`;
     }
 }
 
@@ -98,7 +145,7 @@ function makeXAxis(t) {
             hideOverlap: true,
             formatter: val => {
                 const d = new Date(val);
-                return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                return `${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')} UTC`;
             }
         }
     };
@@ -142,7 +189,7 @@ function lineSeries(data, color, yAxisIndex = 0, name = '') {
 
 function applyBaseOptions() {
     const t = theme();
-    const grid = { left: 44, right: 16, top: 14, bottom: 28 };
+    const grid = { left: 15, right: 15, top: 14, bottom: 28, containLabel: true };
     const anim = {
         animation: true,
         animationDuration: 400,
@@ -153,7 +200,6 @@ function applyBaseOptions() {
         ...anim,
         grid,
         xAxis: makeXAxis(t),
-        // Eje Y dinámico para CO2: usa dataMin/dataMax pero con rango mínimo de 400-1500
         yAxis: makeYAxis(t, 400, 1500, ' ppm'),
         series: [lineSeries([], t.co2, 0, 'CO2')],
         tooltip: { 
@@ -162,8 +208,9 @@ function applyBaseOptions() {
                 if (!params.length) return '';
                 const p = params[0];
                 const date = new Date(p.value[0]);
-                const time = date.toLocaleTimeString('es-CO', { hour12: false });
-                return `${time}<br/>CO2: ${p.value[1].toFixed(0)} ppm`;
+                const h = String(date.getUTCHours()).padStart(2, '0');
+                const m = String(date.getUTCMinutes()).padStart(2, '0');
+                return `${h}:${m} UTC<br/>CO2: ${p.value[1].toFixed(0)} ppm`;
             }
         }
     });
@@ -191,8 +238,9 @@ function applyBaseOptions() {
             formatter: params => {
                 if (!params.length) return '';
                 const date = new Date(params[0].value[0]);
-                const time = date.toLocaleTimeString('es-CO', { hour12: false });
-                let content = `${time}<br/>`;
+                const h = String(date.getUTCHours()).padStart(2, '0');
+                const m = String(date.getUTCMinutes()).padStart(2, '0');
+                let content = `${h}:${m} UTC<br/>`;
                 params.forEach(p => {
                     const val = p.value[1].toFixed(1);
                     const unit = p.axisIndex === 1 ? '%' : '°';
@@ -211,21 +259,20 @@ function updateCharts() {
     const tempData = win.map(d => [d.ts, d.temp]);
     const humData  = win.map(d => [d.ts, d.hum]);
 
-    // Calcular rango dinámico para CO2
-    let co2Min = 400, co2Max = 1500;
+    let co2Min, co2Max;
     if (co2Data.length > 0) {
         const co2Values = co2Data.map(d => d[1]);
         const minVal = Math.min(...co2Values);
         const maxVal = Math.max(...co2Values);
         
-        // Expandir el rango dinámicamente
-        co2Min = Math.floor(Math.min(minVal, 400) / 100) * 100;
-        co2Max = Math.ceil(Math.max(maxVal, 1000) / 100) * 100;
+        // Rango adaptativo con margen del 10%
+        const range = maxVal - minVal;
+        const margin = Math.max(range * 0.1, 100);
         
-        // Asegurar un margen mínimo
-        const margin = (co2Max - co2Min) * 0.1 || 100;
-        co2Min -= margin;
-        co2Max += margin;
+        co2Min = Math.floor((minVal - margin) / 100) * 100;
+        co2Max = Math.ceil((maxVal + margin) / 100) * 100;
+        
+        if (co2Min < 0) co2Min = 0;
     }
 
     chartCO2.setOption({
@@ -242,19 +289,14 @@ function updateCharts() {
 }
 
 function calculateRisk(temp, hum, co2) {
-    // PELIGRO: Valores críticos
-    // CO2 > 1500 ppm, Temp >35°C o <15°C, Humedad >70% o <30%
     if (co2 > THRESHOLDS.co2.warning || temp > THRESHOLDS.temp.warning || temp < THRESHOLDS.temp.low || hum > THRESHOLDS.hum.warning || hum < THRESHOLDS.hum.low) {
         return 'peligro';
     }
     
-    // ADVERTENCIA: Valores en zonas de precaución
-    // CO2 1000-1500, Temp 30-35°C, Humedad 60-70%
     if (co2 > THRESHOLDS.co2.high || (temp > THRESHOLDS.temp.high && temp <= THRESHOLDS.temp.warning) || hum > THRESHOLDS.hum.high) {
         return 'advertencia';
     }
     
-    // NORMAL: Valores dentro de rangos recomendados
     return 'normal';
 }
 
@@ -307,7 +349,11 @@ function updateCards(p) {
     set('status-hardware', p.hw);
     set('status-count', readingsToday);
     set('status-alarms', alarmsToday);
-    set('last-update-time', new Date(p.ts).toLocaleTimeString('es-CO', { hour12: false }));
+    const lastDate = new Date(p.ts);
+    const lh = String(lastDate.getUTCHours()).padStart(2, '0');
+    const lm = String(lastDate.getUTCMinutes()).padStart(2, '0');
+    const ls = String(lastDate.getUTCSeconds()).padStart(2, '0');
+    set('last-update-time', `${lh}:${lm}:${ls} UTC`);
 
     const label = document.getElementById('current-status-label');
     if (label) label.textContent = p.risk.toUpperCase() + (selectedHardware === 'all' ? ` — ${p.hw}` : '');
@@ -316,6 +362,35 @@ function updateCards(p) {
     const bigBadge = document.getElementById('big-status-badge');
     if (bigBadge) bigBadge.className = `big-status-badge status-${p.risk}`;
     set('big-status-text', p.risk.toUpperCase());
+    updateAlarmBanner(p);
+}
+
+function updateAlarmBanner(p) {
+    const banner = document.getElementById('alarm-banner');
+    const msg = document.getElementById('alarm-message');
+    const sensorsDiv = document.getElementById('alarm-sensors');
+    if (!banner) return;
+
+    if (p.risk !== 'normal') {
+        banner.classList.remove('hidden');
+        banner.className = `alarm-banner status-${p.risk}`;
+        document.body.classList.add('alarm-active');
+
+        let failing = [];
+        if (p.co2 > THRESHOLDS.co2.high) failing.push(`CO2: ${p.co2.toFixed(0)}`);
+        if (p.temp > THRESHOLDS.temp.high || p.temp < THRESHOLDS.temp.low) failing.push(`TEMP: ${p.temp.toFixed(1)}°`);
+        if (p.hum > THRESHOLDS.hum.high || p.hum < THRESHOLDS.hum.low) failing.push(`HUM: ${p.hum.toFixed(1)}%`);
+
+        if (sensorsDiv) {
+            sensorsDiv.innerHTML = failing.map(s => `<span class="alarm-sensor-tag">${s}</span>`).join('');
+        }
+        if (msg) {
+            msg.textContent = p.risk === 'peligro' ? 'Niveles CRÍTICOS detectados' : 'Niveles fuera de rango detectados';
+        }
+    } else {
+        banner.classList.add('hidden');
+        document.body.classList.remove('alarm-active');
+    }
 }
 
 function updateTable(p) {
@@ -346,6 +421,7 @@ function addHardwareTab(hw) {
         selectedHardware = hw;
         if (latestByHardware[hw]) updateCards(latestByHardware[hw]);
         updateCharts();
+        loadMetrics8h();
     };
     tabs.appendChild(btn);
 }
@@ -377,18 +453,30 @@ function connectWS() {
 }
 
 function formatTs(ms) {
-    return new Date(ms).toLocaleTimeString('es-CO', { hour12: false });
+    const d = new Date(ms);
+    const h = String(d.getUTCHours()).padStart(2, '0');
+    const m = String(d.getUTCMinutes()).padStart(2, '0');
+    const s = String(d.getUTCSeconds()).padStart(2, '0');
+    return `${h}:${m}:${s} UTC`;
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadSystemThresholds();
+    await loadMetrics8h();
     initCharts();
     connectWS();
+    setInterval(loadMetrics8h, 60000);
     document.getElementById('tab-all')?.addEventListener('click', () => {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-all').classList.add('active');
         selectedHardware = 'all';
         if (historyData.length > 0) updateCards(historyData[historyData.length - 1]);
         updateCharts();
+        loadMetrics8h();
+    });
+
+    document.getElementById('alarm-dismiss')?.addEventListener('click', () => {
+        document.getElementById('alarm-banner').classList.add('hidden');
+        document.body.classList.remove('alarm-active');
     });
 });

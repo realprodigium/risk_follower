@@ -7,12 +7,12 @@ class Records(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     hardware = Column(String(50), nullable=False)
-    timestamp = Column(DateTime, nullable=False)
+    timestamp = Column(DateTime(timezone=True), nullable=False)
     temperature = Column(Float, nullable=False)
     humidity = Column(Float, nullable=False)
     co2 = Column(Float, nullable=False)
     risk = Column(String(20), nullable=False)
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime(timezone=True), default=get_colombia_now)
 
     @staticmethod
     def reset_data(db):

@@ -1,12 +1,11 @@
 # CO2 Monitor - Cervecería Artesanal
 
-Sistema de monitoreo en tiempo real de temperatura, humedad y CO2 para tanques de fermentación.
+Sistema de monitoreo en tiempo real suave de temperatura, humedad y CO2 por procesos de fermentacion.
 
-**🚀 [LISTO PARA PRODUCCIÓN EN RENDER + SUPABASE]** → Ver [00_EMPEZAR_AQUI.md](00_EMPEZAR_AQUI.md)
 
 ## Características
 
-- **Ingesta MQTT en tiempo real** desde sensores ESP32/Arduino vía HiveMQ Cloud
+- **Ingesta MQTT en tiempo real suave** desde sensores ESP32 vía HiveMQ Cloud
 - **Base de datos PostgreSQL** en Supabase (cloud)
 - **API REST autenticada** con filtros (hardware, riesgo, fecha)  
 - **Dashboard web en vivo** con WebSockets
@@ -25,18 +24,15 @@ Sistema de monitoreo en tiempo real de temperatura, humedad y CO2 para tanques d
 
 ## ⚡ Despliegue Rápido
 
-### 🟢 Producción (Render + Supabase)
+### Producción (Render (monolito) + Supabase (db))
 
-Ver: **[00_EMPEZAR_AQUI.md](00_EMPEZAR_AQUI.md)** (30 minutos)
-
-Resumen:
 1. Crea proyecto en Supabase
 2. Restaura schema desde `restore_schema.sql`
 3. Genera `SECRET_KEY` con openssl
 4. Push a GitHub
 5. Deploy en Render (detecta automáticamente `render.yaml`)
 
-### 🔵 Desarrollo Local
+### Desarrollo Local
 
 ```bash
 # Clonar y entrar en el proyecto
@@ -44,7 +40,7 @@ git clone <repo>
 cd co2project
 
 # Crear venv
-python -m venv .venv
+virtualenv .venv
 .venv\Scripts\activate  # Windows
 
 # Instalar dependencias
@@ -65,13 +61,3 @@ uvicorn app.main:app --reload
 # - Health: http://localhost:8000/health
 # - Dashboard: http://localhost:8000
 ```
-
-## 📖 Documentación
-
-| Documento | Para | Leer |
-|-----------|------|------|
-| **00_EMPEZAR_AQUI.md** | Producción paso a paso | 🔴 PRIMERO |
-| **QUICK_START_RENDER.md** | Deploy rápido (5 min) | 2️⃣ |
-| **DEPLOYMENT_RENDER.md** | Guía detallada | Referencia |
-| **SECURITY_CONFIG.md** | Seguridad producción | Importante |
-| **SUPABASE_DEVELOPMENT.md** | Dev con Supabase cloud | Opcional |

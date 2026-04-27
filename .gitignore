@@ -11,3 +11,4 @@ test_mqtt_sensor.py
 seed_users.py
 restore_schema.sql
 ACTION_ITEMS.md
+testing/

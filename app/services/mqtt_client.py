@@ -19,7 +19,7 @@ MQTT_USER = os.getenv('MQTT_USER')
 MQTT_PASSWORD = os.getenv('MQTT_PASSWORD')
 MQTT_TLS_ENABLED = os.getenv('MQTT_TLS_ENABLED', 'False').lower() == 'true'
 
-REQUIRED_FIELDS = ['timestamp', 'humidity', 'co2']
+REQUIRED_FIELDS = ['humidity', 'co2']
 
 class PayloadValidator:    
     @staticmethod
@@ -31,9 +31,7 @@ class PayloadValidator:
         if raw_temp is None:
             return False, None, "No temperature field found"
         try:
-            timestamp = datetime.fromisoformat(payload['timestamp'])
-            if timestamp.tzinfo is None:
-                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            timestamp = datetime.now(timezone.utc)
             temperature = float(raw_temp)
             humidity = float(payload['humidity'])
             co2 = float(payload['co2'])
@@ -116,7 +114,7 @@ class MQTTSubscriber:
                 tls_context = None
                 if MQTT_TLS_ENABLED: tls_context = ssl.create_default_context()
                 async with Client(MQTT_BROKER, MQTT_PORT, **auth_kwargs, tls_context=tls_context) as client:
-                    self.connected = True
+                    self.isconnected = True
                     logger.info(f"Connected to MQTT broker")
                     topic = MQTT_TOPIC.rstrip('/')
                     if '+' not in topic and '#' not in topic:
@@ -130,7 +128,7 @@ class MQTTSubscriber:
                             await self.process_message(payload)
                         except Exception as e: logger.error(f'Message processing error: {e}')
             except Exception as e:
-                self.connected = False
+                self.isconnected = False
                 logger.warning(f'MQTT connection error: {e}. Retrying in {retry_delay} seconds...')
                 await asyncio.sleep(retry_delay)
 

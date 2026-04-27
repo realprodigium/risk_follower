@@ -15,7 +15,6 @@ from app.services.mqtt_client import mqtt_subscriber
 from app.services.websockets import router as ws_router
 from sqlalchemy import text
 
-# Configure logging
 log_level = os.getenv("LOG_LEVEL", "info").upper()
 logging.basicConfig(
     level=getattr(logging, log_level),
