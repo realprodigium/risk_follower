@@ -73,54 +73,9 @@ async function loadSystemThresholds() {
     }
 }
 
-async function loadMetrics8h() {
-    try {
-        const token = localStorage.getItem('access_token');
-        const hw = selectedHardware === 'all' ? '' : `?hardware=${selectedHardware}`;
-        const res = await fetch(`/records/metrics/8h${hw}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-            const metrics = await res.json();
-            updateMetricsUI(metrics);
-        }
-    } catch (e) {
-        console.error("Failed to load 8h metrics", e);
-    }
-}
 
-function updateMetricsUI(m) {
-    const set = (id, val, def='--') => {
-        const el = document.getElementById(id);
-        if (el) el.textContent = val !== null && val !== undefined ? val : def;
-    };
-    
-    set('m8h-co2-max', m.co2.max);
-    set('m8h-co2-min', m.co2.min);
-    set('m8h-co2-avg', m.co2.avg);
-    set('m8h-co2-vol', m.co2.volatility);
-    
-    set('m8h-temp-max', m.temperature.max);
-    set('m8h-temp-min', m.temperature.min);
-    set('m8h-temp-avg', m.temperature.avg);
-    set('m8h-temp-vol', m.temperature.volatility);
-    
-    set('m8h-hum-max', m.humidity.max);
-    set('m8h-hum-min', m.humidity.min);
-    set('m8h-hum-avg', m.humidity.avg);
-    set('m8h-hum-vol', m.humidity.volatility);
-    
-    set('m8h-risk-events', m.risk_events);
-    set('m8h-warn-events', m.warning_events);
-    set('m8h-records', m.records_in_period);
-    
-    const qual = document.getElementById('metrics-quality');
-    if (qual) {
-        const qText = m.data_quality === 'optima' ? '✓ Óptima' : 
-                      m.data_quality === 'buena' ? '≈ Buena' : '⚠ Limitada';
-        qual.textContent = `Calidad: ${qText}`;
-    }
-}
+
+
 
 function initCharts() {
     chartCO2 = echarts.init(document.getElementById('chart-co2'));
@@ -419,9 +374,7 @@ function addHardwareTab(hw) {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         selectedHardware = hw;
-        if (latestByHardware[hw]) updateCards(latestByHardware[hw]);
         updateCharts();
-        loadMetrics8h();
     };
     tabs.appendChild(btn);
 }
@@ -462,17 +415,14 @@ function formatTs(ms) {
 
 document.addEventListener('DOMContentLoaded', async () => {
     await loadSystemThresholds();
-    await loadMetrics8h();
     initCharts();
     connectWS();
-    setInterval(loadMetrics8h, 60000);
     document.getElementById('tab-all')?.addEventListener('click', () => {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-all').classList.add('active');
         selectedHardware = 'all';
         if (historyData.length > 0) updateCards(historyData[historyData.length - 1]);
         updateCharts();
-        loadMetrics8h();
     });
 
     document.getElementById('alarm-dismiss')?.addEventListener('click', () => {

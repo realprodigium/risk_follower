@@ -85,15 +85,7 @@ def get_statistics(
     stats = record_service.get_statistics(db=db, hardware=hardware)
     return stats
 
-@router.get('/records/metrics/8h', tags=['records', 'statistics'])
-def get_metrics_8h(
-    db: Session = Depends(get_db),
-    current_user: models.Users = Depends(auth_services.get_current_user),
-    hardware: Optional[str] = Query(None, description="Filter metrics by hardware"),
-):
-    """Retorna métricas de las últimas 8 horas: máximos, mínimos, promedios, volatilidad y eventos de riesgo"""
-    metrics = record_service.get_metrics_8h(db=db, hardware=hardware)
-    return metrics
+
 
 @router.post('/records', response_model=schemas.Record, tags=['records'])
 def create_record(
