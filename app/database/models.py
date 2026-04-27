@@ -1,5 +1,9 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+
+def get_colombia_now():
+    return datetime.now(timezone(timedelta(hours=-5)))
+
 from ..db import Base
 
 class Records(Base):

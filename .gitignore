@@ -12,3 +12,4 @@ seed_users.py
 restore_schema.sql
 ACTION_ITEMS.md
 testing/
+scratch/
