@@ -1,0 +1,11 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+testing/
+scratch/
+*.sql
+*.png
+node_modules
+.pytest_cache
