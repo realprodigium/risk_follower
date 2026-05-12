@@ -44,7 +44,8 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(models.Users).filter(models.Users.username == user.username).first():
         raise HTTPException(status_code=400, detail="Username already registered")
     hashed = auth_services.get_password_hash(user.password)
-    new_user = models.Users(username=user.username, password=hashed, role=user.role)
+    # Por seguridad, el registro público siempre crea usuarios con rol 'user'
+    new_user = models.Users(username=user.username, password=hashed, role="user")
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

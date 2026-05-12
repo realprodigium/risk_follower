@@ -13,6 +13,7 @@ from app.api import admin as admin_api
 from app.database.models import Records
 from app.services.mqtt_client import mqtt_subscriber
 from app.services.websockets import router as ws_router
+# pyrefly: ignore [missing-import]
 from sqlalchemy import text
 
 log_level = os.getenv("LOG_LEVEL", "info").upper()
@@ -86,12 +87,13 @@ app = FastAPI(
     title="CO2 Monitoring System",
     description="Sistema de monitoreo de CO2 para cervecerías artesanales",
     lifespan=lifespan,
-    docs_url="/docs" ,
-    redoc_url="/redoc" ,
-    openapi_url="/openapi.json",
+    docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
+    redoc_url="/redoc" if os.getenv("ENVIRONMENT") != "production" else None,
+    openapi_url="/openapi.json" if os.getenv("ENVIRONMENT") != "production" else None,
 )
 
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])
+allowed_hosts = os.getenv("ALLOWED_HOSTS", "*").split(",")
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 cors_origins_env = os.getenv("BACKEND_CORS_ORIGINS", "*")
 origins = [origin.strip() for origin in cors_origins_env.split(",")] if cors_origins_env != "*" else ["*"]

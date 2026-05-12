@@ -12,7 +12,6 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 def _audit(db: Session, username: str, action: str, detail: str = None):
-    """Registra auditoría de acciones"""
     db.add(models.AuditLog(username=username, action=action, detail=detail))
     db.commit()
 
