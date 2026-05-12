@@ -8,7 +8,7 @@ class RecordCreate(BaseModel):
     temperature: float
     humidity:    float
     co2:         float
-    risk:        str = Field(..., pattern="^(alto|normal|bajo)$")
+    risk:        str = Field(..., pattern="^(alto|normal|bajo|peligro|advertencia|high|low)$")
 
 class Record(RecordCreate):
     id:         int

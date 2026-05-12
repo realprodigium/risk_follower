@@ -21,6 +21,8 @@ const CHART_RANGES = {
 let historyData = [];
 let selectedHardware = 'all';
 let latestByHardware = {};
+let lastDataTime = {}; // Para monitorear latencia de hardware
+const HEARTBEAT_THRESHOLD = 15000; // 15 seg sin datos = stale
 let readingsToday = 0;
 let alarmsToday = 0;
 let knownHardware = new Set();
@@ -67,10 +69,31 @@ async function loadSystemThresholds() {
                 }
             };
             console.log('Thresholds loaded:', THRESHOLDS);
+            updateBarGradients();
         }
     } catch (e) {
         console.error("Failed to load thresholds", e);
     }
+}
+
+function updateBarGradients() {
+    //mantener gradientes para usar en otros backgrounds
+}
+
+function updateGauge(id, percent, risk) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const totalLength = 126; // Pi * radius (40) roughly
+    const offset = totalLength - (percent * totalLength / 100);
+    el.style.strokeDashoffset = offset;
+    
+    // Cambiar color del gauge según el riesgo del sensor
+    const colors = {
+        normal:      'var(--status-normal-fg)',
+        advertencia: 'var(--status-advertencia-fg)',
+        peligro:     'var(--status-peligro-fg)'
+    };
+    el.style.stroke = colors[risk] || colors.normal;
 }
 
 
@@ -231,14 +254,70 @@ function updateCharts() {
     }
 
     chartCO2.setOption({
-        yAxis: { min: Math.max(0, co2Min), max: co2Max },
-        series: [{ data: co2Data }]
+        yAxis: { min: CHART_RANGES.co2.min, max: CHART_RANGES.co2.max },
+        series: [{ 
+            data: co2Data,
+            markArea: {
+                silent: true,
+                data: [
+                    [
+                        { yAxis: 0, itemStyle: { color: 'rgba(29,211,138,0.03)' } },
+                        { yAxis: THRESHOLDS.co2.high }
+                    ],
+                    [
+                        { yAxis: THRESHOLDS.co2.high, itemStyle: { color: 'rgba(255,193,7,0.06)' } },
+                        { yAxis: THRESHOLDS.co2.warning }
+                    ],
+                    [
+                        { yAxis: THRESHOLDS.co2.warning, itemStyle: { color: 'rgba(240,64,64,0.06)' } },
+                        { yAxis: CHART_RANGES.co2.max }
+                    ]
+                ]
+            },
+            markLine: {
+                symbol: ['none', 'none'],
+                data: [
+                    { yAxis: THRESHOLDS.co2.high, lineStyle: { color: '#ffc107', opacity: 0.4, type: 'dashed' }, label: { formatter: 'Límite Advertencia', position: 'end', fontSize: 9 } },
+                    { yAxis: THRESHOLDS.co2.warning, lineStyle: { color: '#f04040', opacity: 0.4, type: 'dashed' }, label: { formatter: 'Límite Peligro', position: 'end', fontSize: 9 } }
+                ]
+            }
+        }]
     });
 
     chartTH.setOption({
         series: [
-            { name: 'Temp', data: tempData },
-            { name: 'Hum',  data: humData  }
+            { 
+                name: 'Temp', 
+                data: tempData,
+                markArea: {
+                    silent: true,
+                    data: [
+                        [
+                            { yAxis: THRESHOLDS.temp.low, itemStyle: { color: 'rgba(29,211,138,0.03)' } },
+                            { yAxis: THRESHOLDS.temp.high }
+                        ]
+                    ]
+                },
+                markLine: {
+                    symbol: ['none', 'none'],
+                    data: [
+                        { yAxis: THRESHOLDS.temp.low, lineStyle: { color: '#f04040', opacity: 0.2 }, label: { show: false } },
+                        { yAxis: THRESHOLDS.temp.high, lineStyle: { color: '#ffc107', opacity: 0.2 }, label: { show: false } },
+                        { yAxis: THRESHOLDS.temp.warning, lineStyle: { color: '#f04040', opacity: 0.2 }, label: { show: false } }
+                    ]
+                }
+            },
+            { 
+                name: 'Hum',  
+                data: humData,
+                markLine: {
+                    symbol: ['none', 'none'],
+                    data: [
+                        { yAxis: THRESHOLDS.hum.low, yAxisIndex: 1, lineStyle: { color: '#f04040', opacity: 0.2 }, label: { show: false } },
+                        { yAxis: THRESHOLDS.hum.high, yAxisIndex: 1, lineStyle: { color: '#ffc107', opacity: 0.2 }, label: { show: false } }
+                    ]
+                }
+            }
         ]
     });
 }
@@ -286,20 +365,30 @@ function updateCards(p) {
     set('humidity-value', p.hum.toFixed(1));
     set('co2-value',      p.co2.toFixed(0));
 
-    // Calcular porcentaje para las barras usando rangos dinámicos
-    const tBar = document.getElementById('temp-bar');
-    const hBar = document.getElementById('humidity-bar');
-    const cBar = document.getElementById('co2-bar');
-    
-    // Barra de temperatura: 5 a 45°C (rango visual)
-    if (tBar) tBar.style.width = Math.min(100, Math.max(0, ((p.temp - 5) / 40) * 100)) + '%';
-    
-    // Barra de humedad: 0 a 100%
-    if (hBar) hBar.style.width = Math.min(100, p.hum) + '%';
-    
-    // Barra de CO2: dinámico basado en valor máximo reciente + margen
-    // Usar rango de 0 a 2000 ppm para visualización
-    if (cBar) cBar.style.width = Math.min(100, Math.max(0, (p.co2 / 2000) * 100)) + '%';
+    // Update Gauges
+    const tRange = CHART_RANGES.temp.max - CHART_RANGES.temp.min;
+    const tPercent = ((p.temp - CHART_RANGES.temp.min) / tRange) * 100;
+    let tRisk = 'normal';
+    if (p.temp > THRESHOLDS.temp.warning || p.temp < THRESHOLDS.temp.low) tRisk = 'peligro';
+    else if (p.temp > THRESHOLDS.temp.high) tRisk = 'advertencia';
+    updateGauge('temp-gauge-fill', Math.min(100, Math.max(0, tPercent)), tRisk);
+    document.getElementById('temp-value').style.color = `var(--status-${tRisk}-fg)`;
+
+    const hRange = CHART_RANGES.hum.max - CHART_RANGES.hum.min;
+    const hPercent = ((p.hum - CHART_RANGES.hum.min) / hRange) * 100;
+    let hRisk = 'normal';
+    if (p.hum > THRESHOLDS.hum.warning || p.hum < THRESHOLDS.hum.low) hRisk = 'peligro';
+    else if (p.hum > THRESHOLDS.hum.high) hRisk = 'advertencia';
+    updateGauge('humidity-gauge-fill', Math.min(100, Math.max(0, hPercent)), hRisk);
+    document.getElementById('humidity-value').style.color = `var(--status-${hRisk}-fg)`;
+
+    const cRange = CHART_RANGES.co2.max - CHART_RANGES.co2.min;
+    const cPercent = ((p.co2 - CHART_RANGES.co2.min) / cRange) * 100;
+    let cRisk = 'normal';
+    if (p.co2 > THRESHOLDS.co2.warning) cRisk = 'peligro';
+    else if (p.co2 > THRESHOLDS.co2.high) cRisk = 'advertencia';
+    updateGauge('co2-gauge-fill', Math.min(100, Math.max(0, cPercent)), cRisk);
+    document.getElementById('co2-value').style.color = `var(--status-${cRisk}-fg)`;
 
     set('status-hardware', p.hw);
     set('status-count', readingsToday);
@@ -322,28 +411,65 @@ function updateCards(p) {
 
 function updateAlarmBanner(p) {
     const banner = document.getElementById('alarm-banner');
-    const msg = document.getElementById('alarm-message');
-    const sensorsDiv = document.getElementById('alarm-sensors');
-    if (!banner) return;
+    const modal = document.getElementById('risk-modal');
+    const overlay = document.getElementById('alarm-overlay');
+    const modalTitle = document.getElementById('modal-risk-title');
+    const modalMetrics = document.getElementById('modal-metrics');
+    const modalInstr = document.getElementById('modal-instructions-list');
+
+    if (!modal) return;
 
     if (p.risk !== 'normal') {
-        banner.classList.remove('hidden');
-        banner.className = `alarm-banner status-${p.risk}`;
-        document.body.classList.add('alarm-active');
+        // Mostrar Modal y Overlay
+        modal.classList.remove('hidden');
+        modal.className = `modal-backdrop status-${p.risk}`;
+        if (overlay) {
+            if (p.risk === 'peligro') overlay.classList.add('active');
+            else overlay.classList.remove('active');
+        }
 
+        // Título del Modal
+        modalTitle.textContent = p.risk === 'peligro' ? 'ALERTA: PELIGRO CRÍTICO' : 'AVISO: RIESGO DETECTADO';
+
+        // Métricas en el Modal
         let failing = [];
-        if (p.co2 > THRESHOLDS.co2.high) failing.push(`CO2: ${p.co2.toFixed(0)}`);
-        if (p.temp > THRESHOLDS.temp.high || p.temp < THRESHOLDS.temp.low) failing.push(`TEMP: ${p.temp.toFixed(1)}°`);
-        if (p.hum > THRESHOLDS.hum.high || p.hum < THRESHOLDS.hum.low) failing.push(`HUM: ${p.hum.toFixed(1)}%`);
+        if (p.co2 > THRESHOLDS.co2.high) failing.push({ label: 'CO2', val: p.co2.toFixed(0), unit: 'PPM' });
+        if (p.temp > THRESHOLDS.temp.high || p.temp < THRESHOLDS.temp.low) failing.push({ label: 'TEMP', val: p.temp.toFixed(1), unit: '°C' });
+        if (p.hum > THRESHOLDS.hum.high || p.hum < THRESHOLDS.hum.low) failing.push({ label: 'HUM', val: p.hum.toFixed(1), unit: '%' });
 
-        if (sensorsDiv) {
-            sensorsDiv.innerHTML = failing.map(s => `<span class="alarm-sensor-tag">${s}</span>`).join('');
-        }
-        if (msg) {
-            msg.textContent = p.risk === 'peligro' ? 'Niveles CRÍTICOS detectados' : 'Niveles fuera de rango detectados';
-        }
+        modalMetrics.innerHTML = failing.map(s => `
+            <div class="modal-metric-badge">
+                <div class="modal-metric-label">${s.label}</div>
+                <div class="modal-metric-value">${s.val} <small>${s.unit}</small></div>
+            </div>
+        `).join('');
+
+        // Protocolos según Riesgo
+        const protocols = {
+            peligro: [
+                'Evacuar el área de fermentación inmediatamente.',
+                'Ventilar el espacio abriendo todas las salidas de aire.',
+                'Notificar al responsable de SST y brigada de emergencia.',
+                'No reingresar hasta que los niveles vuelvan a rango normal.'
+            ],
+            advertencia: [
+                'Aumentar la ventilación mecánica en el área.',
+                'Monitorear visualmente el comportamiento de los sensores.',
+                'Verificar posibles fugas en las válvulas de alivio.',
+                'Prepararse para una posible evacuación si los niveles suben.'
+            ]
+        };
+
+        const currentProtocol = protocols[p.risk] || protocols.advertencia;
+        modalInstr.innerHTML = currentProtocol.map(step => `<li>${step}</li>`).join('');
+
+        // Mantener banner oculto si usamos el modal
+        if (banner) banner.classList.add('hidden');
+        document.body.classList.add('alarm-active');
     } else {
-        banner.classList.add('hidden');
+        modal.classList.add('hidden');
+        if (overlay) overlay.classList.remove('active');
+        if (banner) banner.classList.add('hidden');
         document.body.classList.remove('alarm-active');
     }
 }
@@ -365,11 +491,11 @@ function updateTable(p) {
 
 function addHardwareTab(hw) {
     const tabs = document.getElementById('sensor-tabs');
-    if (!tabs || tabs.querySelector(`[data-hardware="${hw}"]`)) return;
+    if (!tabs || tabs.querySelector(`[data-hw="${hw}"]`)) return;
     const btn = document.createElement('button');
     btn.className = 'sensor-tab';
-    btn.dataset.hardware = hw;
-    btn.textContent = hw;
+    btn.setAttribute('data-hw', hw);
+    btn.innerHTML = `<span class="heartbeat-dot"></span> ${hw}`;
     btn.onclick = () => {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -381,15 +507,46 @@ function addHardwareTab(hw) {
 
 function setConnectionStatus(state) {
     const el = document.getElementById('ws-status');
+    const overlay = document.getElementById('connection-overlay');
     if (!el) return;
+    
     el.className = `connection-pill ${state}`;
     el.querySelector('span').textContent = state === 'connected' ? 'En vivo' : 'Desconectado';
+    
+    if (overlay) {
+        if (state === 'connected') overlay.classList.remove('active');
+        else overlay.classList.add('active');
+    }
+}
+
+function checkHeartbeats() {
+    const now = Date.now();
+    const pills = document.querySelectorAll('.sensor-tab');
+    pills.forEach(pill => {
+        const hw = pill.getAttribute('data-hw');
+        if (hw === 'all') return;
+        
+        const last = lastDataTime[hw] || 0;
+        const diff = now - last;
+        
+        const dot = pill.querySelector('.heartbeat-dot');
+        if (!dot) return;
+
+        if (last === 0) dot.className = 'heartbeat-dot';
+        else if (diff > 45000) dot.className = 'heartbeat-dot dead';
+        else if (diff > HEARTBEAT_THRESHOLD) dot.className = 'heartbeat-dot stale';
+        else dot.className = 'heartbeat-dot active';
+    });
 }
 
 function connectWS() {
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     websocket = new WebSocket(`${protocol}//${location.host}/ws/sensor-data`);
-    websocket.onopen = () => { wsAttempts = 0; setConnectionStatus('connected'); };
+    websocket.onopen = () => { 
+        wsAttempts = 0; 
+        setConnectionStatus('connected');
+        console.log('WS Connected');
+    };
     websocket.onclose = () => {
         setConnectionStatus('disconnected');
         const delay = Math.min(3000 * 2 ** wsAttempts, 30000);
@@ -400,7 +557,10 @@ function connectWS() {
     websocket.onmessage = e => {
         try {
             const raw = JSON.parse(e.data);
-            if (raw.timestamp) ingest(normalize(raw));
+            if (raw.timestamp) {
+                lastDataTime[raw.hardware] = Date.now();
+                ingest(normalize(raw));
+            }
         } catch (err) {}
     };
 }
@@ -417,6 +577,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSystemThresholds();
     initCharts();
     connectWS();
+    
+    // Iniciar monitoreo de latencia
+    setInterval(checkHeartbeats, 5000);
     document.getElementById('tab-all')?.addEventListener('click', () => {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-all').classList.add('active');

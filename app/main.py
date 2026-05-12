@@ -86,9 +86,9 @@ app = FastAPI(
     title="CO2 Monitoring System",
     description="Sistema de monitoreo de CO2 para cervecerías artesanales",
     lifespan=lifespan,
-    docs_url="/docs" if os.getenv("ENVIRONMENT") != "production" else None,
-    redoc_url="/redoc" if os.getenv("ENVIRONMENT") != "production" else None,
-    openapi_url="/openapi.json" if os.getenv("ENVIRONMENT") != "production" else None,
+    docs_url="/docs" ,
+    redoc_url="/redoc" ,
+    openapi_url="/openapi.json",
 )
 
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=["*"])

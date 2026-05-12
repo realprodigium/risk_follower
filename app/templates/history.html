@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es" data-theme="dark">
+<html lang="es" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,7 +43,7 @@
                 </a>
                 <button class="nav-item nav-btn" id="export-csv-btn">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Exportar CSV
+                    Exportar a Excel
                 </button>
             </nav>
             <div class="user-zone">
@@ -102,6 +102,8 @@
             <select id="status-filter" class="filter-select">
                 <option value="">Todos</option>
                 <option value="normal">Normal</option>
+                <option value="advertencia">Advertencia</option>
+                <option value="peligro">Peligro</option>
                 <option value="alto">Alto</option>
                 <option value="bajo">Bajo</option>
             </select>
@@ -172,7 +174,7 @@
 
 <script>
 (function() {
-    const saved = localStorage.getItem('theme') || 'dark';
+    const saved = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-theme', saved);
     document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('theme-toggle');

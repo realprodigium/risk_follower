@@ -257,22 +257,28 @@ async function exportCSV() {
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
         const data = await resp.json();
-        let csv = 'ID,Timestamp,Hardware,Temperatura_C,Humedad_pct,CO2_PPM,Estado\n';
+        
+        // Formato Excel Friendly (CSV con BOM y punto y coma)
+        const BOM = '\uFEFF';
+        let csv = 'ID;Fecha;Hardware;Temperatura (°C);Humedad (%);CO2 (PPM);Estado\n';
+        
         data.forEach(r => {
-            csv += `${r.id},"${r.timestamp}",${r.hardware},${r.temperature},${r.humidity},${r.co2},${r.risk}\n`;
+            const dateStr = formatTimestamp(r.timestamp);
+            csv += `${r.id};"${dateStr}";${r.hardware};${r.temperature.toFixed(1)};${r.humidity.toFixed(1)};${r.co2.toFixed(0)};${riskLabel(r.risk)}\n`;
         });
 
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = `co2_historial_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.download = `reporte_monitoreo_${new Date().toISOString().slice(0, 10)}.csv`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     } catch (err) {
         console.error('Export error:', err);
+        alert('Error al exportar los datos. Verifica la conexión.');
     }
 }
 
@@ -292,7 +298,15 @@ function showTableError(msg) {
         </td></tr>`;
 }
 function riskLabel(risk) {
-    const map = { normal: 'Normal', alto: 'Alto', bajo: 'Bajo', high: 'Alto', low: 'Bajo' };
+    const map = { 
+        normal:      'Normal', 
+        advertencia: 'Advertencia', 
+        peligro:     'Peligro',
+        alto:        'Peligro', 
+        bajo:        'Bajo', 
+        high:        'Peligro', 
+        low:         'Bajo' 
+    };
     return map[risk] || risk;
 }
 
