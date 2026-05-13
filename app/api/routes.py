@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Response
+from fastapi.responses import StreamingResponse
+import io
+import xlsxwriter
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -40,7 +43,6 @@ def read_records(
     
     logger.info(f"User {current_user.username} fetched {len(records)} records")
     return records
-
 
 @router.get('/records/latest', response_model=List[schemas.Record], tags=['records'])
 def get_latest_records(
@@ -131,3 +133,74 @@ def delete_record(
     logger.info(f"Record {record_id} deleted by {current_user.username}")
     
     return {"message": f"Record {record_id} deleted successfully"}
+
+
+@router.get('/records/export/xlsx', tags=['records'])
+def export_records_xlsx(
+    db: Session = Depends(get_db),
+    current_user: models.Users = Depends(auth_services.get_current_user),
+    hardware: Optional[str] = Query(None),
+    risk: Optional[str] = Query(None),
+    date_from: Optional[datetime] = Query(None),
+    date_to: Optional[datetime] = Query(None),
+):
+    records = record_service.get_records(
+        db=db,
+        limit=100000, #siempre debe haber un limite para exportación
+        #comunicarse con el desarrollador para obtener todo el histórico
+        hardware=hardware,
+        risk=risk,
+        date_from=date_from,
+        date_to=date_to,
+    )
+    
+    if not records:
+        raise HTTPException(status_code=404, detail="No records to export")
+
+    output = io.BytesIO()
+    workbook = xlsxwriter.Workbook(output)
+    worksheet = workbook.add_worksheet("Reporte Monitoreo")
+
+    header_fmt = workbook.add_format({
+        'bold': True, 
+        'bg_color': '#111110', 
+        'font_color': '#FFFFFF',
+        'border': 1
+    })
+    date_fmt = workbook.add_format({'num_format': 'dd/mm/yyyy hh:mm:ss'})
+    num_fmt = workbook.add_format({'num_format': '#,##0.00'})
+
+    headers = ["ID", "Fecha (UTC)", "Hardware", "Temp (°C)", "Humedad (%)", "CO2 (PPM)", "Estado"]
+    for col, header in enumerate(headers):
+        worksheet.write(0, col, header, header_fmt)
+
+    for row, r in enumerate(records, start=1):
+        worksheet.write(row, 0, r.id)
+        ts = r.timestamp
+        if hasattr(ts, 'replace'):
+            ts = ts.replace(tzinfo=None) #excel confunde formato de fechas
+        worksheet.write_datetime(row, 1, ts, date_fmt)
+        worksheet.write(row, 2, r.hardware)
+        worksheet.write(row, 3, r.temperature, num_fmt)
+        worksheet.write(row, 4, r.humidity, num_fmt)
+        worksheet.write(row, 5, r.co2, num_fmt)
+        worksheet.write(row, 6, r.risk.upper())
+
+    worksheet.set_column('A:A', 8)
+    worksheet.set_column('B:B', 20)
+    worksheet.set_column('C:C', 15)
+    worksheet.set_column('D:F', 12)
+    worksheet.set_column('G:G', 15)
+
+    workbook.close()
+    output.seek(0)
+
+    filename = f"reporte_monitoreo_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+    
+    _audit(db, current_user.username, "EXPORT_XLSX", f"Exported {len(records)} records")
+
+    return StreamingResponse(
+        output,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )

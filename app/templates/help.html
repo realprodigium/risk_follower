@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seven Waves — Ayuda y Documentación</title>
+    <meta name="description" content="Guía de uso y ayuda del sistema de monitoreo.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/main.css') }}" rel="stylesheet">
+    <style>
+        .help-layout {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2.5rem;
+        }
+        .help-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            box-shadow: var(--shadow-card);
+        }
+        .help-title {
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .help-subtitle {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .color-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            padding: 1.25rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+        .color-preview {
+            display: flex; align-items: center; gap: 10px;
+            font-weight: 600; font-family: var(--font-mono); font-size: 0.85rem;
+        }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; }
+        
+        .item-normal { background: var(--status-normal-bg); border-color: var(--status-normal-bd); color: var(--status-normal-fg); }
+        .item-normal .color-dot { background: var(--status-normal-fg); }
+        
+        .item-warning { background: var(--status-advertencia-bg); border-color: var(--status-advertencia-bd); color: var(--status-advertencia-fg); }
+        .item-warning .color-dot { background: var(--status-advertencia-fg); }
+        
+        .item-danger { background: var(--status-peligro-bg); border-color: var(--status-peligro-bd); color: var(--status-peligro-fg); }
+        .item-danger .color-dot { background: var(--status-peligro-fg); }
+
+        .action-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+        .action-card {
+            display: flex;
+            gap: 1rem;
+            padding: 1.25rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+        }
+        .action-icon {
+            flex-shrink: 0;
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text-primary);
+        }
+        .action-content h3 { font-size: 0.95rem; margin-bottom: 0.25rem; }
+        .action-content p { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4; }
+
+        @media (max-width: 600px) {
+            .action-list { grid-template-columns: 1fr; }
+            .help-title { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <div class="brand-text">
+                <span class="brand-name">Seven Waves</span>
+            </div>
+        </div>
+
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
+
+        <div class="nav-container" id="nav-container">
+            <nav class="top-nav">
+                <a href="/" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </a>
+                <a href="/history" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Historial
+                </a>
+                <a href="/admin" class="nav-item admin-only" target="_blank" id="nav-admin" style="display:none">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Admin
+                </a>
+                <a href="/help" class="nav-item active">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Ayuda
+                </a>
+            </nav>
+
+            <div class="user-zone">
+                <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+                    <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                </button>
+                <div class="user-avatar" id="user-avatar">U</div>
+                <div class="user-info">
+                    <span id="user-display">Cargando…</span>
+                    <span id="user-role">--</span>
+                </div>
+                <button class="logout-btn" id="logout-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Salir
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="help-layout">
+    <header>
+        <h1 class="help-title">Centro de Ayuda</h1>
+        <p class="help-subtitle">Información sobre el funcionamiento, estados y acciones del sistema.</p>
+    </header>
+
+    <section class="help-section">
+        <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+            <h2>Estados y Colores</h2>
+        </div>
+        <p style="margin-bottom: 1.5rem; font-size: 0.9rem; color: var(--text-secondary);">
+            El sistema utiliza un código de colores semafórico para indicar la salud del ambiente en tiempo real.
+        </p>
+        <div class="color-grid">
+            <div class="color-item item-normal">
+                <div class="color-preview"><span class="color-dot"></span> NORMAL</div>
+                <p style="font-size: 0.85rem; line-height: 1.5;">Los niveles de CO₂, Temperatura y Humedad se encuentran dentro de los rangos óptimos de operación y seguridad.</p>
+            </div>
+            <div class="color-item item-warning">
+                <div class="color-preview"><span class="color-dot"></span> ADVERTENCIA</div>
+                <p style="font-size: 0.85rem; line-height: 1.5;">Se ha detectado una desviación de los niveles ideales. Requiere revisión de ventilación o climatización.</p>
+            </div>
+            <div class="color-item item-danger">
+                <div class="color-preview"><span class="color-dot"></span> PELIGRO</div>
+                <p style="font-size: 0.85rem; line-height: 1.5;">Niveles críticos detectados. Active los protocolos de seguridad industrial (SST) y evacue si es necesario.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="help-section">
+        <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <h2>Acciones del Sistema</h2>
+        </div>
+        <div class="action-list">
+            <div class="action-card">
+                <div class="action-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                </div>
+                <div class="action-content">
+                    <h3>Dashboard</h3>
+                    <p>Monitoreo en vivo de los sensores con gráficas dinámicas y medidores de nivel.</p>
+                </div>
+            </div>
+            <div class="action-card">
+                <div class="action-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <div class="action-content">
+                    <h3>Historial</h3>
+                    <p>Acceso a todos los registros almacenados. Permite filtrar por fecha, sensor y estado.</p>
+                </div>
+            </div>
+            <div class="action-card">
+                <div class="action-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </div>
+                <div class="action-content">
+                    <h3>Exportar</h3>
+                    <p>Genera un archivo Excel con los datos filtrados para auditorías o análisis externos.</p>
+                </div>
+            </div>
+            <div class="action-card">
+                <div class="action-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <div class="action-content">
+                    <h3>Administración</h3>
+                    <p>Configuración de umbrales de alerta y gestión de dispositivos (Solo Administradores).</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="help-section">
+        <div class="section-header">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <h2>Modo de Uso</h2>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+            <p>1. <strong>Navegación:</strong> Use la barra superior para alternar entre el monitor en tiempo real y el histórico.</p>
+            <p>2. <strong>Filtros:</strong> En la pestaña de Historial, puede buscar eventos específicos usando los selectores de fecha y estado.</p>
+            <p>3. <strong>Personalización:</strong> Use el botón de luna/sol en la esquina superior derecha para alternar entre el modo claro y oscuro según su preferencia.</p>
+            <p>4. <strong>Alertas:</strong> Si los niveles superan los límites seguros, aparecerá un banner rojo y una notificación persistente con los pasos a seguir según el protocolo SST.</p>
+        </div>
+    </section>
+</main>
+
+<script>
+(function() {
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        });
+        
+        // Menu toggle mobile
+        const menuBtn = document.getElementById('menu-toggle');
+        const nav = document.getElementById('nav-container');
+        if (menuBtn && nav) {
+            menuBtn.addEventListener('click', () => {
+                nav.classList.toggle('open');
+            });
+        }
+    });
+})();
+</script>
+<script src="{{ url_for('static', path='js/auth.js') }}"></script>
+</body>
+</html>

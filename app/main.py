@@ -163,3 +163,7 @@ async def history_page(request: Request):
 @app.get("/admin", response_class=HTMLResponse, tags=['view'])
 async def admin_page(request: Request):
     return templates.TemplateResponse(request=request, name='admin.html', context={})
+
+@app.get("/help", response_class=HTMLResponse, tags=['view'])
+async def help_page(request: Request):
+    return templates.TemplateResponse(request=request, name='help.html', context={})

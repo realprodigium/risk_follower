@@ -222,7 +222,7 @@ function setupControls() {
         );
     });
 
-    document.getElementById('export-csv-btn').addEventListener('click', exportCSV);
+    document.getElementById('export-csv-btn').addEventListener('click', exportXLSX);
 
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
@@ -247,38 +247,29 @@ function loadUserInfo() {
     } catch (e) {}
 }
 
-async function exportCSV() {
+async function exportXLSX() {
     try {
         const token = localStorage.getItem('access_token');
         const qs    = buildQueryParams(true);
-        const resp  = await fetch(`/records?${qs}`, {
+        const url   = `/records/export/xlsx?${qs}`;
+
+        const resp = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
 
-        const data = await resp.json();
-        
-        // Formato Excel Friendly (CSV con BOM y punto y coma)
-        const BOM = '\uFEFF';
-        let csv = 'ID;Fecha;Hardware;Temperatura (°C);Humedad (%);CO2 (PPM);Estado\n';
-        
-        data.forEach(r => {
-            const dateStr = formatTimestamp(r.timestamp);
-            csv += `${r.id};"${dateStr}";${r.hardware};${r.temperature.toFixed(1)};${r.humidity.toFixed(1)};${r.co2.toFixed(0)};${riskLabel(r.risk)}\n`;
-        });
-
-        const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = `reporte_monitoreo_${new Date().toISOString().slice(0, 10)}.csv`;
+        const blob = await resp.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `reporte_monitoreo_${new Date().toISOString().slice(0, 10)}.xlsx`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(downloadUrl);
     } catch (err) {
         console.error('Export error:', err);
-        alert('Error al exportar los datos. Verifica la conexión.');
+        alert('Error al exportar los datos a Excel.');
     }
 }
 

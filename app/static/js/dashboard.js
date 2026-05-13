@@ -21,8 +21,8 @@ const CHART_RANGES = {
 let historyData = [];
 let selectedHardware = 'all';
 let latestByHardware = {};
-let lastDataTime = {}; // Para monitorear latencia de hardware
-const HEARTBEAT_THRESHOLD = 15000; // 15 seg sin datos = stale
+let lastDataTime = {};
+const HEARTBEAT_THRESHOLD = 15000;
 let readingsToday = 0;
 let alarmsToday = 0;
 let knownHardware = new Set();
@@ -83,11 +83,10 @@ function updateBarGradients() {
 function updateGauge(id, percent, risk) {
     const el = document.getElementById(id);
     if (!el) return;
-    const totalLength = 126; // Pi * radius (40) roughly
+    const totalLength = 126; 
     const offset = totalLength - (percent * totalLength / 100);
     el.style.strokeDashoffset = offset;
     
-    // Cambiar color del gauge según el riesgo del sensor
     const colors = {
         normal:      'var(--status-normal-fg)',
         advertencia: 'var(--status-advertencia-fg)',
@@ -95,10 +94,6 @@ function updateGauge(id, percent, risk) {
     };
     el.style.stroke = colors[risk] || colors.normal;
 }
-
-
-
-
 
 function initCharts() {
     chartCO2 = echarts.init(document.getElementById('chart-co2'));
@@ -243,7 +238,6 @@ function updateCharts() {
         const minVal = Math.min(...co2Values);
         const maxVal = Math.max(...co2Values);
         
-        // Rango adaptativo con margen del 10%
         const range = maxVal - minVal;
         const margin = Math.max(range * 0.1, 100);
         
@@ -365,7 +359,6 @@ function updateCards(p) {
     set('humidity-value', p.hum.toFixed(1));
     set('co2-value',      p.co2.toFixed(0));
 
-    // Update Gauges
     const tRange = CHART_RANGES.temp.max - CHART_RANGES.temp.min;
     const tPercent = ((p.temp - CHART_RANGES.temp.min) / tRange) * 100;
     let tRisk = 'normal';
@@ -420,18 +413,14 @@ function updateAlarmBanner(p) {
     if (!modal) return;
 
     if (p.risk !== 'normal') {
-        // Mostrar Modal y Overlay
         modal.classList.remove('hidden');
         modal.className = `modal-backdrop status-${p.risk}`;
         if (overlay) {
             if (p.risk === 'peligro') overlay.classList.add('active');
             else overlay.classList.remove('active');
         }
-
-        // Título del Modal
         modalTitle.textContent = p.risk === 'peligro' ? 'ALERTA: PELIGRO CRÍTICO' : 'AVISO: RIESGO DETECTADO';
 
-        // Métricas en el Modal
         let failing = [];
         if (p.co2 > THRESHOLDS.co2.high) failing.push({ label: 'CO2', val: p.co2.toFixed(0), unit: 'PPM' });
         if (p.temp > THRESHOLDS.temp.high || p.temp < THRESHOLDS.temp.low) failing.push({ label: 'TEMP', val: p.temp.toFixed(1), unit: '°C' });
@@ -444,7 +433,6 @@ function updateAlarmBanner(p) {
             </div>
         `).join('');
 
-        // Protocolos según Riesgo
         const protocols = {
             peligro: [
                 'Evacuar el área de fermentación inmediatamente.',
@@ -463,7 +451,6 @@ function updateAlarmBanner(p) {
         const currentProtocol = protocols[p.risk] || protocols.advertencia;
         modalInstr.innerHTML = currentProtocol.map(step => `<li>${step}</li>`).join('');
 
-        // Mantener banner oculto si usamos el modal
         if (banner) banner.classList.add('hidden');
         document.body.classList.add('alarm-active');
     } else {
@@ -578,7 +565,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initCharts();
     connectWS();
     
-    // Iniciar monitoreo de latencia
     setInterval(checkHeartbeats, 5000);
     document.getElementById('tab-all')?.addEventListener('click', () => {
         document.querySelectorAll('.sensor-tab').forEach(b => b.classList.remove('active'));
@@ -592,4 +578,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('alarm-banner').classList.add('hidden');
         document.body.classList.remove('alarm-active');
     });
+
+    document.getElementById('export-btn')?.addEventListener('click', exportXLSX);
 });
+
+async function exportXLSX() {
+    const token = localStorage.getItem('access_token');
+    let url = `/records/export/xlsx?token=${token}`; // Pasamos token si es necesario o usamos auth directo
+    if (selectedHardware !== 'all') {
+        url += `&hardware=${selectedHardware}`;
+    }
+    
+    try {
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!response.ok) throw new Error('Error en la descarga');
+        
+        const blob = await response.blob();
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `reporte_dashboard_${new Date().toISOString().slice(0, 10)}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+        console.error('Export error:', err);
+        alert('Error al exportar los datos a Excel.');
+    }
+}
