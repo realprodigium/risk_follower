@@ -278,6 +278,8 @@ function updateCharts() {
         }]
     });
 
+    updatePredictiveTrend(co2Data);
+
     chartTH.setOption({
         series: [
             { 
@@ -326,6 +328,62 @@ function calculateRisk(temp, hum, co2) {
     }
     
     return 'normal';
+}
+
+function updatePredictiveTrend(co2Data) {
+    const el = document.getElementById('co2-predictive');
+    const txt = document.getElementById('co2-predictive-text');
+    if (!el || !txt || co2Data.length < 3) {
+        if(el) el.classList.add('hidden');
+        return;
+    }
+
+    // Linear regression: y = m*x + b
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    const n = co2Data.length;
+    // Normalize X to start at 0 (seconds)
+    const startTs = co2Data[0][0];
+
+    for (let i = 0; i < n; i++) {
+        const x = (co2Data[i][0] - startTs) / 1000; 
+        const y = co2Data[i][1];
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumX2 += x * x;
+    }
+
+    const m = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const b = (sumY - m * sumX) / n;
+
+    // Only predict if slope is significantly positive
+    if (m > 0.5) {
+        // Time to reach warning
+        const currentCO2 = co2Data[n-1][1];
+        const target = THRESHOLDS.co2.warning;
+        
+        if (currentCO2 >= target) {
+            el.classList.add('hidden'); // already at danger
+            return;
+        }
+
+        const secRemaining = (target - currentCO2) / m;
+        const minRemaining = secRemaining / 60;
+
+        if (minRemaining > 0 && minRemaining < 60) {
+            el.classList.remove('hidden');
+            el.className = 'metric-predictive pred-up';
+            txt.innerHTML = `Peligro en <b style="font-size:0.85rem">${Math.ceil(minRemaining)} min</b>`;
+        } else {
+            el.classList.add('hidden');
+        }
+    } else if (m < -0.5) {
+        el.classList.remove('hidden');
+        el.className = 'metric-predictive pred-down';
+        txt.innerHTML = `Niveles bajando`;
+    } else {
+        el.classList.add('hidden');
+    }
 }
 
 function normalize(raw) {
@@ -402,17 +460,26 @@ function updateCards(p) {
     updateAlarmBanner(p);
 }
 
-function updateAlarmBanner(p) {
+let activeModalHardware = null;
+let acknowledgingIncident = false;
+
+async function updateAlarmBanner(p) {
     const banner = document.getElementById('alarm-banner');
     const modal = document.getElementById('risk-modal');
     const overlay = document.getElementById('alarm-overlay');
     const modalTitle = document.getElementById('modal-risk-title');
     const modalMetrics = document.getElementById('modal-metrics');
     const modalInstr = document.getElementById('modal-instructions-list');
+    const btnAck = document.getElementById('btn-acknowledge');
+    const activeIncidentIdEl = document.getElementById('active-incident-id');
 
     if (!modal) return;
 
     if (p.risk !== 'normal') {
+        // If the modal is already shown for this hardware, don't reconstruct it.
+        if (!modal.classList.contains('hidden') && activeModalHardware === p.hw) return;
+
+        activeModalHardware = p.hw;
         modal.classList.remove('hidden');
         modal.className = `modal-backdrop status-${p.risk}`;
         if (overlay) {
@@ -449,15 +516,59 @@ function updateAlarmBanner(p) {
         };
 
         const currentProtocol = protocols[p.risk] || protocols.advertencia;
-        modalInstr.innerHTML = currentProtocol.map(step => `<li>${step}</li>`).join('');
+        
+        // Render Checklist
+        modalInstr.innerHTML = currentProtocol.map((step, idx) => `
+            <div class="checklist-item" onclick="toggleCheck(${idx})">
+                <input type="checkbox" id="chk-${idx}" onchange="checkAllCompleted()">
+                <label for="chk-${idx}">${step}</label>
+            </div>
+        `).join('');
+
+        btnAck.disabled = true;
+        btnAck.textContent = 'Completa el checklist para continuar';
 
         if (banner) banner.classList.add('hidden');
         document.body.classList.add('alarm-active');
+
+        // Async fetch incident ID
+        try {
+            const res = await fetch(`/incidents/?status=open&hardware=${p.hw}&limit=1`, { 
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` } 
+            });
+            const d = await res.json();
+            if (d && d.length > 0) {
+                activeIncidentIdEl.value = d[0].id;
+            }
+        } catch (e) { console.error('Error fetching incident id', e); }
+
     } else {
-        modal.classList.add('hidden');
-        if (overlay) overlay.classList.remove('active');
-        if (banner) banner.classList.add('hidden');
-        document.body.classList.remove('alarm-active');
+        // If risk is normal, only hide if we were showing it for this hardware and not acknowledging
+        if (activeModalHardware === p.hw && !acknowledgingIncident) {
+            modal.classList.add('hidden');
+            if (overlay) overlay.classList.remove('active');
+            if (banner) banner.classList.add('hidden');
+            document.body.classList.remove('alarm-active');
+            activeModalHardware = null;
+        }
+    }
+}
+
+window.toggleCheck = function(idx) {
+    const chk = document.getElementById(`chk-${idx}`);
+    if (chk) {
+        chk.checked = !chk.checked;
+        window.checkAllCompleted();
+    }
+}
+
+window.checkAllCompleted = function() {
+    const checkboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]');
+    const allChecked = Array.from(checkboxes).every(c => c.checked);
+    const btnAck = document.getElementById('btn-acknowledge');
+    if (btnAck) {
+        btnAck.disabled = !allChecked;
+        btnAck.textContent = allChecked ? 'Reconocer Incidente y Continuar' : 'Completa el checklist para continuar';
     }
 }
 
@@ -580,6 +691,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     document.getElementById('export-btn')?.addEventListener('click', exportXLSX);
+
+    document.getElementById('btn-acknowledge')?.addEventListener('click', async () => {
+        const incidentId = document.getElementById('active-incident-id').value;
+        const btn = document.getElementById('btn-acknowledge');
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+        acknowledgingIncident = true;
+
+        try {
+            if (incidentId) {
+                await fetch(`/incidents/${incidentId}/acknowledge`, {
+                    method: 'PUT',
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
+                });
+            }
+            // Dismiss modal visually
+            document.getElementById('risk-modal').classList.add('hidden');
+            document.getElementById('alarm-overlay')?.classList.remove('active');
+            document.body.classList.remove('alarm-active');
+            activeModalHardware = null;
+        } catch (e) {
+            console.error('Acknowledge error', e);
+        } finally {
+            acknowledgingIncident = false;
+        }
+    });
 });
 
 async function exportXLSX() {

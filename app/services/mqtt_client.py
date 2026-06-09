@@ -88,6 +88,11 @@ class MQTTSubscriber:
             db.commit()
             db.refresh(record)
             logger.info(f"MQTT saved → ID {record.id}")
+
+            # Auto-open incident for non-normal readings
+            if risk in ('peligro', 'advertencia'):
+                await self._handle_incident(db, record, risk)
+
             return record
         except Exception as exc:
             db.rollback()
@@ -95,6 +100,34 @@ class MQTTSubscriber:
             return None
         finally:
             db.close()
+
+    async def _handle_incident(self, db, record, risk: str):
+        """Open (or reuse) an incident and fire a notification if it's new."""
+        try:
+            from app.services.incident_service import incident_service
+            from app.services.notification_service import send_incident_alert
+
+            incident, created = incident_service.get_or_create_open(
+                db=db,
+                hardware=record.hardware,
+                risk_level=risk,
+                co2=record.co2,
+                temperature=record.temperature,
+                humidity=record.humidity,
+            )
+            if created and not incident.notification_sent:
+                success, error = await send_incident_alert(
+                    incident_id=incident.id,
+                    hardware=incident.hardware,
+                    risk_level=incident.risk_level,
+                    co2=incident.co2,
+                    temperature=incident.temperature,
+                    humidity=incident.humidity,
+                    triggered_at=incident.triggered_at,
+                )
+                incident_service.mark_notification_sent(db, incident.id, error)
+        except Exception as e:
+            logger.error(f"Incident handling error: {e}")
 
     async def process_message(self, payload: dict) -> Records | None:
         is_valid, formatted_payload, error_msg = PayloadValidator.validate(payload)

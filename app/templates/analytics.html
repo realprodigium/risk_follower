@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seven Waves — Analítica Industrial</title>
+    <meta name="description" content="Analítica avanzada: promedios, máximos, tendencias horarias y distribución de riesgos del sistema de monitoreo CO2.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/main.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', path='css/analytics.css') }}" rel="stylesheet">
+</head>
+<body>
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <div class="brand-text">
+                <span class="brand-name">Seven Waves</span>
+            </div>
+        </div>
+        <button class="menu-toggle" id="menu-toggle" aria-label="Menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
+        <div class="nav-container" id="nav-container">
+            <nav class="top-nav">
+                <a href="/" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                    Dashboard
+                </a>
+                <a href="/history" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Historial
+                </a>
+                <a href="/incidents" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Incidentes
+                </a>
+                <a href="/analytics" class="nav-item active">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Analítica
+                </a>
+                <a href="/admin" class="nav-item admin-only" target="_blank" id="nav-admin" style="display:none">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Admin
+                </a>
+                <a href="/help" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Ayuda
+                </a>
+            </nav>
+            <div class="user-zone">
+                <button class="theme-toggle" id="theme-toggle" title="Cambiar tema">
+                    <svg class="icon-moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    <svg class="icon-sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                </button>
+                <div class="user-avatar" id="user-avatar">U</div>
+                <div class="user-info">
+                    <span id="user-display">Cargando…</span>
+                    <span id="user-role">--</span>
+                </div>
+                <button class="logout-btn" id="logout-btn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                    Salir
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="an-layout">
+
+    <!-- Header + Controls -->
+    <div class="an-page-header">
+        <div>
+            <h1 class="an-title">Analítica Industrial</h1>
+            <p class="an-desc">Estadísticas, tendencias y distribución de riesgos</p>
+        </div>
+        <div class="an-controls">
+            <div class="an-control-group">
+                <label class="an-control-label">Período</label>
+                <select id="an-hours" class="an-select">
+                    <option value="6">Últimas 6h</option>
+                    <option value="24" selected>Últimas 24h</option>
+                    <option value="72">Últimos 3 días</option>
+                    <option value="168">Última semana</option>
+                    <option value="720">Último mes</option>
+                </select>
+            </div>
+            <button class="an-refresh-btn" id="an-refresh">Actualizar</button>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="an-kpi-grid" id="an-kpi-grid">
+        <!-- CO2 -->
+        <div class="an-kpi-card an-kpi--co2">
+            <div class="an-kpi-label">CO₂ Promedio</div>
+            <div class="an-kpi-value" id="an-co2-avg">--</div>
+            <div class="an-kpi-unit">PPM</div>
+            <div class="an-kpi-sub-row">
+                <span class="an-kpi-min" id="an-co2-min">Mín: --</span>
+                <span class="an-kpi-max" id="an-co2-max">Máx: --</span>
+                <span class="an-kpi-p95" id="an-co2-p95">P95: --</span>
+            </div>
+        </div>
+        <!-- Temperatura -->
+        <div class="an-kpi-card an-kpi--temp">
+            <div class="an-kpi-label">Temperatura Prom.</div>
+            <div class="an-kpi-value" id="an-temp-avg">--</div>
+            <div class="an-kpi-unit">°C</div>
+            <div class="an-kpi-sub-row">
+                <span class="an-kpi-min" id="an-temp-min">Mín: --</span>
+                <span class="an-kpi-max" id="an-temp-max">Máx: --</span>
+                <span class="an-kpi-p95" id="an-temp-p95">P95: --</span>
+            </div>
+        </div>
+        <!-- Humedad -->
+        <div class="an-kpi-card an-kpi--hum">
+            <div class="an-kpi-label">Humedad Prom.</div>
+            <div class="an-kpi-value" id="an-hum-avg">--</div>
+            <div class="an-kpi-unit">%</div>
+            <div class="an-kpi-sub-row">
+                <span class="an-kpi-min" id="an-hum-min">Mín: --</span>
+                <span class="an-kpi-max" id="an-hum-max">Máx: --</span>
+                <span class="an-kpi-p95" id="an-hum-p95">P95: --</span>
+            </div>
+        </div>
+        <!-- Total Lecturas -->
+        <div class="an-kpi-card an-kpi--count">
+            <div class="an-kpi-label">Lecturas analizadas</div>
+            <div class="an-kpi-value" id="an-total">--</div>
+            <div class="an-kpi-unit">registros</div>
+        </div>
+    </div>
+
+    <!-- Risk Distribution -->
+    <div class="an-charts-row">
+        <div class="an-chart-card an-chart-card--pie">
+            <div class="an-chart-header">
+                <h2 class="an-chart-title">Distribución de estados</h2>
+                <span class="an-chart-sub" id="an-risk-period">Período seleccionado</span>
+            </div>
+            <div id="chart-risk-pie" style="height:260px;"></div>
+            <div class="an-risk-legend">
+                <div class="an-risk-legend-item">
+                    <span class="an-risk-dot an-risk-dot--normal"></span>
+                    <span>Normal</span>
+                    <span class="an-risk-pct" id="an-normal-pct">--</span>
+                </div>
+                <div class="an-risk-legend-item">
+                    <span class="an-risk-dot an-risk-dot--warning"></span>
+                    <span>Advertencia</span>
+                    <span class="an-risk-pct" id="an-warning-pct">--</span>
+                </div>
+                <div class="an-risk-legend-item">
+                    <span class="an-risk-dot an-risk-dot--danger"></span>
+                    <span>Peligro</span>
+                    <span class="an-risk-pct" id="an-danger-pct">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="an-chart-card an-chart-card--trend">
+            <div class="an-chart-header">
+                <h2 class="an-chart-title">Tendencia horaria de CO₂</h2>
+                <span class="an-chart-sub">Promedio y máximo por hora</span>
+            </div>
+            <div id="chart-co2-hourly" style="height:300px;"></div>
+        </div>
+    </div>
+
+    <!-- Observability metrics panel -->
+    <div class="an-obs-card">
+        <div class="an-chart-header" style="border-bottom:1px solid var(--border-subtle);padding-bottom:1rem;margin-bottom:1.25rem;">
+            <h2 class="an-chart-title">Observabilidad del sistema</h2>
+            <span class="an-chart-sub">Métricas en tiempo real del proceso</span>
+        </div>
+        <div class="an-obs-grid" id="an-obs-grid">
+            <div class="an-obs-item">
+                <span class="an-obs-label">Estado MQTT</span>
+                <span class="an-obs-value" id="obs-mqtt">--</span>
+            </div>
+            <div class="an-obs-item">
+                <span class="an-obs-label">Uptime servidor</span>
+                <span class="an-obs-value" id="obs-uptime">--</span>
+            </div>
+            <div class="an-obs-item">
+                <span class="an-obs-label">Registros totales</span>
+                <span class="an-obs-value" id="obs-total">--</span>
+            </div>
+            <div class="an-obs-item">
+                <span class="an-obs-label">Lecturas hoy</span>
+                <span class="an-obs-value" id="obs-today">--</span>
+            </div>
+            <div class="an-obs-item">
+                <span class="an-obs-label">Alarmas totales</span>
+                <span class="an-obs-value" id="obs-alarms">--</span>
+            </div>
+            <div class="an-obs-item">
+                <span class="an-obs-label">Incidentes abiertos</span>
+                <span class="an-obs-value" id="obs-open-inc">--</span>
+            </div>
+            <div class="an-obs-item">
+                <span class="an-obs-label">Incidentes resueltos</span>
+                <span class="an-obs-value" id="obs-res-inc">--</span>
+            </div>
+            <div class="an-obs-item">
+                <span class="an-obs-label">Incidentes hoy</span>
+                <span class="an-obs-value" id="obs-inc-today">--</span>
+            </div>
+        </div>
+        <div class="an-metrics-link">
+            <a href="/admin/metrics" target="_blank" class="an-metrics-btn">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                Ver métricas Prometheus-raw
+            </a>
+        </div>
+    </div>
+
+</main>
+
+<script>
+(function() {
+    const saved = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', saved);
+    document.addEventListener('DOMContentLoaded', () => {
+        const btn = document.getElementById('theme-toggle');
+        if (btn) btn.addEventListener('click', () => {
+            const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            if (typeof refreshCharts === 'function') refreshCharts();
+        });
+    });
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script src="{{ url_for('static', path='js/auth.js') }}"></script>
+<script src="{{ url_for('static', path='js/analytics.js') }}"></script>
+</body>
+</html>

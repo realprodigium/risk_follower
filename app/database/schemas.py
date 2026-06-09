@@ -1,6 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 class RecordCreate(BaseModel):
     hardware:    str
@@ -80,3 +80,54 @@ class SystemStats(BaseModel):
     active_devices: int
     alarms_count: int
     records_today: int
+
+# --- Incidents ---
+class IncidentResponse(BaseModel):
+    id: int
+    hardware: str
+    risk_level: str
+    triggered_at: datetime
+    co2: float
+    temperature: float
+    humidity: float
+    status: str
+    acknowledged_at: Optional[datetime] = None
+    acknowledged_by: Optional[str] = None
+    resolved_at: Optional[datetime] = None
+    resolved_by: Optional[str] = None
+    resolution_note: Optional[str] = None
+    notification_sent: bool
+    created_at: datetime
+    class Config:
+        from_attributes = True
+
+class IncidentAcknowledge(BaseModel):
+    pass  # Sólo requiere autenticación, el username viene del token
+
+class IncidentResolve(BaseModel):
+    resolution_note: str = Field(..., min_length=10, description="Descripción obligatoria de cómo se resolvió el incidente")
+
+class IncidentKPIs(BaseModel):
+    open_count: int
+    acknowledged_count: int
+    resolved_count: int
+    total_today: int
+    avg_response_minutes: Optional[float]  # Tiempo medio desde open hasta acknowledged
+    avg_resolution_minutes: Optional[float]  # Tiempo medio desde open hasta resolved
+
+# --- Analytics ---
+class SensorStats(BaseModel):
+    avg: float
+    min_val: float
+    max_val: float
+    p95: float
+    count: int
+
+class AnalyticsSummary(BaseModel):
+    co2: SensorStats
+    temperature: SensorStats
+    humidity: SensorStats
+    normal_pct: float
+    warning_pct: float
+    danger_pct: float
+    total_records: int

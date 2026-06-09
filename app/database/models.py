@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime
+from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text
 from datetime import datetime, timezone, timedelta
 
 def get_colombia_now():
@@ -65,3 +65,26 @@ class AuditLog(Base):
     username = Column(String(50), nullable=False)
     action = Column(String(100), nullable=False)
     detail = Column(String(500), nullable=True)
+
+class Incident(Base):
+    __tablename__ = 'incidents'
+
+    id = Column(Integer, primary_key=True, index=True)
+    hardware = Column(String(50), nullable=False, index=True)
+    risk_level = Column(String(20), nullable=False)  # advertencia / peligro
+    triggered_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    co2 = Column(Float, nullable=False)
+    temperature = Column(Float, nullable=False)
+    humidity = Column(Float, nullable=False)
+    status = Column(String(20), nullable=False, default='open')  # open / acknowledged / resolved
+    # Acknowledge
+    acknowledged_at = Column(DateTime(timezone=True), nullable=True)
+    acknowledged_by = Column(String(50), nullable=True)
+    # Resolve
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+    resolved_by = Column(String(50), nullable=True)
+    resolution_note = Column(Text, nullable=True)
+    # Notifications
+    notification_sent = Column(Boolean, default=False)
+    notification_error = Column(String(200), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

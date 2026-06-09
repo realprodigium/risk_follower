@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.db import Base, engine, SessionLocal, check_db_connection
 from app.api import auth, routes
 from app.api import admin as admin_api
+from app.api import incidents as incidents_api
 from app.database.models import Records
 from app.services.mqtt_client import mqtt_subscriber
 from app.services.websockets import router as ws_router
@@ -147,6 +148,7 @@ app.include_router(auth.router, prefix="/auth")
 app.include_router(routes.router)
 app.include_router(ws_router)
 app.include_router(admin_api.router)
+app.include_router(incidents_api.router)
 
 @app.get("/login", response_class=HTMLResponse, tags=['view'])
 def login_page(request: Request):
@@ -167,3 +169,11 @@ async def admin_page(request: Request):
 @app.get("/help", response_class=HTMLResponse, tags=['view'])
 async def help_page(request: Request):
     return templates.TemplateResponse(request=request, name='help.html', context={})
+
+@app.get("/incidents", response_class=HTMLResponse, tags=['view'])
+async def incidents_page(request: Request):
+    return templates.TemplateResponse(request=request, name='incidents.html', context={})
+
+@app.get("/analytics", response_class=HTMLResponse, tags=['view'])
+async def analytics_page(request: Request):
+    return templates.TemplateResponse(request=request, name='analytics.html', context={})

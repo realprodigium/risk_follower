@@ -76,6 +76,14 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                     Historial
                 </a>
+                <a href="/incidents" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    Incidentes
+                </a>
+                <a href="/analytics" class="nav-item">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                    Analítica
+                </a>
                 <a href="/admin" class="nav-item admin-only" target="_blank" id="nav-admin" style="display:none">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                     Admin
@@ -195,6 +203,10 @@
                     <span class="metric-value-unit">PPM</span>
                 </div>
             </div>
+            <div class="metric-predictive hidden" id="co2-predictive">
+                <svg class="pred-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                <span id="co2-predictive-text">Evaluando tendencia...</span>
+            </div>
             <div class="metric-range"><span>200</span><span>6000 PPM</span></div>
         </div>
 
@@ -274,15 +286,15 @@
 <!-- Emergency Overlay for Storytelling -->
 <div id="alarm-overlay" class="alarm-overlay"></div>
 
-<!-- Risk Modal (Persistent during Warning/Danger) -->
+<!-- Risk Modal (Protocol Checklist) -->
 <div id="risk-modal" class="modal-backdrop hidden">
-    <div class="modal-container">
+    <div class="modal-container protocol-container">
         <div class="modal-header">
             <div class="modal-icon">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
             </div>
             <div class="modal-title-group">
-                <span class="modal-label">Notificación de Seguridad</span>
+                <span class="modal-label">Incidente Registrado — Checklist Obligatorio</span>
                 <h2 id="modal-risk-title">ESTADO DE RIESGO</h2>
             </div>
         </div>
@@ -293,18 +305,116 @@
             </div>
             
             <div class="modal-protocol">
-                <h3 class="protocol-title">Protocolo de Acción Obligatorio:</h3>
-                <ul id="modal-instructions-list">
-                    <!-- Se llena dinámicamente según el riesgo -->
-                </ul>
+                <h3 class="protocol-title">Acciones del Protocolo SG-SST (Decreto 1072):</h3>
+                <p class="protocol-desc">Para reconocer este incidente, debes confirmar la ejecución de todos los pasos.</p>
+                <div class="checklist-group" id="modal-instructions-list">
+                    <!-- Se llena dinámicamente con checkboxes -->
+                </div>
             </div>
         </div>
 
-        <div class="modal-footer">
-            <p>El sistema volverá a la normalidad automáticamente cuando los niveles se estabilicen.</p>
+        <div class="modal-footer checklist-footer">
+            <input type="hidden" id="active-incident-id" value="">
+            <button class="btn-acknowledge" id="btn-acknowledge" disabled>Reconocer Incidente y Continuar</button>
         </div>
     </div>
 </div>
+
+<style>
+/* Predictive Trend Styles */
+.metric-predictive {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: -8px;
+    margin-bottom: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: rgba(240, 64, 64, 0.08);
+    color: #f04040;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+    justify-content: center;
+    border: 1px dashed rgba(240, 64, 64, 0.2);
+}
+.metric-predictive.hidden {
+    display: none;
+}
+.metric-predictive .pred-icon {
+    flex-shrink: 0;
+}
+.pred-up { color: #f04040; background: rgba(240, 64, 64, 0.08); border-color: rgba(240, 64, 64, 0.2); }
+.pred-down { color: #1dd38a; background: rgba(29, 211, 138, 0.08); border-color: rgba(29, 211, 138, 0.2); }
+
+/* Protocol Checklist Styles */
+.protocol-container {
+    max-width: 580px;
+}
+.protocol-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+}
+.checklist-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.checklist-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+.checklist-item:hover {
+    background: var(--bg-hover);
+}
+.checklist-item input[type="checkbox"] {
+    margin-top: 3px;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--accent);
+}
+.checklist-item label {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    cursor: pointer;
+    line-height: 1.4;
+    user-select: none;
+}
+.checklist-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-subtle);
+}
+.btn-acknowledge {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, background 0.15s;
+}
+.btn-acknowledge:disabled {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+    cursor: not-allowed;
+}
+.btn-acknowledge:not(:disabled):hover {
+    opacity: 0.9;
+}
+</style>
 
 <script>
 (function() {
