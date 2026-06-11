@@ -22,7 +22,7 @@ Sistema de monitoreo en tiempo real suave de temperatura, humedad y CO2 por proc
 - **Frontend**: HTML5 + Vanilla JS + ECharts
 - **Deploy**: Render.com (Web Service + Background Worker) + Supabase
 
-## ⚡ Despliegue Rápido
+## Despliegue Rápido
 
 ### Producción (Render (monolito) + Supabase (db))
 
@@ -57,7 +57,7 @@ docker-compose up -d
 uvicorn app.main:app --reload
 
 # Acceder
-# - API Docs: http://localhost:8000/docs
+# - API Docs: http://localhost:8000/docs #deshabilitado en prod
 # - Health: http://localhost:8000/health
 # - Dashboard: http://localhost:8000
 ```
